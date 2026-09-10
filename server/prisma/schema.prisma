@@ -1,0 +1,154 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  passwordHash String
+  avatar       String?
+  points       Int          @default(0)
+  streakCount  Int          @default(1)
+  lastActive   DateTime     @default(now())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  ownedRooms   Room[]       @relation("OwnedRooms")
+  memberships  RoomMember[]
+  messages     Message[]
+  aiRequests   AIRequest[]
+  submissions  Submission[]
+  tasksCreated Task[]
+}
+
+model Room {
+  id          String       @id @default(uuid())
+  name        String
+  roomCode    String       @unique
+  description String?
+  language    String       @default("javascript")
+  isPublic    Boolean      @default(true)
+  ownerId     String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  owner       User         @relation("OwnedRooms", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     RoomMember[]
+  projects    Project[]
+  messages    Message[]
+  aiRequests  AIRequest[]
+  tasks       Task[]
+}
+
+model RoomMember {
+  id        String   @id @default(uuid())
+  roomId    String
+  userId    String
+  role      String   @default("EDITOR") // OWNER, EDITOR, VIEWER
+  joinedAt  DateTime @default(now())
+
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  roomId      String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  files       File[]
+}
+
+model File {
+  id        String   @id @default(uuid())
+  projectId String
+  name      String
+  path      String
+  content   String
+  language  String   @default("javascript")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, path])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  roomId    String
+  userId    String
+  message   String
+  type      String   @default("chat") // chat, system, code
+  createdAt DateTime @default(now())
+
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AIRequest {
+  id        String   @id @default(uuid())
+  userId    String
+  roomId    String?
+  type      String   // explain, debug, fix, generate, optimize, testcase, hint, review
+  input     String
+  output    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room      Room?    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  roomId      String
+  title       String
+  completed   Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model Challenge {
+  id          String       @id @default(uuid())
+  title       String
+  slug        String       @unique
+  difficulty  String       // EASY, MEDIUM, HARD
+  category    String       // Arrays, Strings, Algorithms, Dynamic Programming, Math
+  description String
+  starterCode String
+  language    String       @default("javascript")
+  testCases   String       // JSON array of { input, expected }
+  hints       String       // JSON array of strings
+  points      Int          @default(50)
+  createdAt   DateTime     @default(now())
+
+  submissions Submission[]
+}
+
+model Submission {
+  id            String    @id @default(uuid())
+  challengeId   String
+  userId        String
+  code          String
+  status        String    // ACCEPTED, WRONG_ANSWER, COMPILE_ERROR
+  executionTime Float?
+  createdAt     DateTime  @default(now())
+
+  challenge     Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
