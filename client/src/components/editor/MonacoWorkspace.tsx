@@ -92,9 +92,32 @@ export const MonacoWorkspace: React.FC = () => {
 
         {/* Action Controls */}
         <div className="flex items-center space-x-2">
+          {/* Language Selector */}
+          <select
+            value={activeFile.language}
+            onChange={(e) => {
+              const lang = e.target.value;
+              emitCodeUpdate(activeFile.content);
+              setActiveFile({ ...activeFile, language: lang });
+            }}
+            className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded px-2 py-1 focus:outline-none focus:border-indigo-500 font-mono"
+          >
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="typescript">TypeScript</option>
+            <option value="cpp">C++</option>
+            <option value="java">Java</option>
+            <option value="html">HTML</option>
+            <option value="css">CSS</option>
+            <option value="csharp">C#</option>
+            <option value="go">Go</option>
+            <option value="rust">Rust</option>
+            <option value="php">PHP</option>
+            <option value="sql">SQL</option>
+            <option value="json">JSON</option>
+          </select>
           <button
             onClick={() => runAI('explain')}
-            className="px-2.5 py-1 text-xs font-semibold rounded-md bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600/20 text-indigo-300 transition flex items-center space-x-1"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
             <span className="hidden sm:inline">AI Explain</span>

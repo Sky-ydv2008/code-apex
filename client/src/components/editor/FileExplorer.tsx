@@ -53,6 +53,16 @@ export const FileExplorer: React.FC = () => {
               <option value="javascript">JavaScript</option>
               <option value="python">Python</option>
               <option value="typescript">TypeScript</option>
+              <option value="cpp">C++</option>
+              <option value="java">Java</option>
+              <option value="html">HTML</option>
+              <option value="css">CSS</option>
+              <option value="csharp">C#</option>
+              <option value="go">Go</option>
+              <option value="rust">Rust</option>
+              <option value="php">PHP</option>
+              <option value="sql">SQL</option>
+              <option value="json">JSON</option>
             </select>
             <div className="flex space-x-1">
               <button
