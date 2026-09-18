@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config';
 
 export interface AuthRequest extends Request {
+  userId?: string;
   user?: {
     userId: string;
     email: string;
@@ -15,7 +16,8 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
+    res.status(401).json({ error: 'Access token required' });
+    return;
   }
 
   try {
@@ -25,8 +27,12 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
       name: string;
     };
     req.user = decoded;
+    req.userId = decoded.userId;
     next();
   } catch (err) {
-    return res.status(403).json({ error: 'Invalid or expired token' });
+    res.status(403).json({ error: 'Invalid or expired token' });
+    return;
   }
 };
+
+export const authMiddleware = authenticateToken;

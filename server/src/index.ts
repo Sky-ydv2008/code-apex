@@ -9,6 +9,8 @@ import projectRoutes from './routes/project.routes';
 import aiRoutes from './routes/ai.routes';
 import codeRoutes from './routes/code.routes';
 import challengeRoutes from './routes/challenge.routes';
+import contestRoutes from './routes/contest.routes';
+import externalProfileRoutes from './routes/externalProfile.routes';
 import { setupRoomSockets } from './sockets/room.socket';
 
 const app = express();
@@ -26,7 +28,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // Health Check
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'CodeCraft AI Server', timestamp: new Date() });
+  res.json({ status: 'ok', service: 'CodeApex Server', timestamp: new Date() });
 });
 
 // API Routes
@@ -36,12 +38,14 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/code', codeRoutes);
 app.use('/api/challenges', challengeRoutes);
+app.use('/api/contests', contestRoutes);
+app.use('/api/external-profile', externalProfileRoutes);
 
 // Setup Sockets
 setupRoomSockets(io);
 
 // Start Server
 server.listen(config.port, () => {
-  console.log(`🚀 CodeCraft AI Server running on http://localhost:${config.port}`);
+  console.log(`🚀 CodeApex Server running on http://localhost:${config.port}`);
   console.log(`📡 Socket.IO real-time server ready`);
 });

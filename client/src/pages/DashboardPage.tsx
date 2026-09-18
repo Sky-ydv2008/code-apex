@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { Room } from '../types';
+import { Room, CombinedProfileStats } from '../types';
 import {
   Plus,
   Code2,
@@ -14,15 +14,22 @@ import {
   Sparkles,
   Search,
   Lock,
+  Trophy,
 } from 'lucide-react';
+import { ExternalProfilesCard } from '../components/profile/ExternalProfilesCard';
+import { EditHandlesModal } from '../components/profile/EditHandlesModal';
 
 export const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
   const [myRooms, setMyRooms] = useState<Room[]>([]);
   const [publicRooms, setPublicRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // External Platform Stats state
+  const [externalStats, setExternalStats] = useState<CombinedProfileStats | null>(null);
+  const [showEditHandlesModal, setShowEditHandlesModal] = useState(false);
 
   // Create Room Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -32,15 +39,24 @@ export const DashboardPage: React.FC = () => {
   const [isPublic, setIsPublic] = useState(true);
   const [creating, setCreating] = useState(false);
 
-  const fetchRooms = async () => {
+  const fetchRoomsAndStats = async () => {
     setLoading(true);
     try {
-      if (user) {
-        const myRes = await api.getUserRooms();
-        setMyRooms(myRes.rooms);
-      }
-      const pubRes = await api.getPublicRooms();
+      const [myRes, pubRes] = await Promise.all([
+        user ? api.getUserRooms() : Promise.resolve({ rooms: [] }),
+        api.getPublicRooms(),
+      ]);
+      setMyRooms(myRes.rooms);
       setPublicRooms(pubRes.rooms);
+
+      if (user) {
+        try {
+          const profileData = await api.getMyExternalProfile();
+          setExternalStats(profileData.stats);
+        } catch {
+          // ignore profile fetch errors
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
     } finally {
@@ -49,7 +65,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchRooms();
+    fetchRoomsAndStats();
   }, [user?.id]);
 
   const handleCreateRoom = async (e: React.FormEvent) => {
@@ -60,257 +76,251 @@ export const DashboardPage: React.FC = () => {
     try {
       const res = await api.createRoom(roomName.trim(), description.trim(), language, isPublic);
       setShowCreateModal(false);
+      setRoomName('');
+      setDescription('');
       navigate(`/room/${res.room.id}`);
-    } catch (err: any) {
-      alert(err.message || 'Failed to create room');
+    } catch (err: unknown) {
+      alert(err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Failed to create room');
     } finally {
       setCreating(false);
     }
   };
 
+  const handleSaveHandles = async (handles: {
+    leetcodeHandle: string;
+    codeforcesHandle: string;
+    codechefHandle: string;
+    gfgHandle: string;
+    bio: string;
+  }) => {
+    const res = await api.updateExternalHandles(handles);
+    setExternalStats(res.stats);
+    if (setUser) {
+      setUser(res.user);
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-950 p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-slate-950 border border-indigo-500/20 shadow-xl">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white">
-            Welcome back, <span className="text-indigo-400">{user?.name || 'Developer'}</span>! 👋
-          </h1>
-          <p className="text-xs md:text-sm text-slate-400">
-            Collaborate in coding rooms, execute code safely, or solve AI-assisted challenges.
-          </p>
-        </div>
+      {/* Welcome Hero Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-cyan-950/80 to-slate-900 border border-slate-800 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-2">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-400 text-xs font-mono">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>CODEAPEX DEVELOPER WORKSPACE</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-black text-slate-100 tracking-tight">
+              Welcome back, <span className="text-cyan-400">{user?.name || 'Developer'}</span>! 👋
+            </h1>
+            <p className="text-sm text-slate-400 max-w-xl">
+              Collaborate in real time, run code in 40+ languages, join proctored contest arenas, and showcase connected LeetCode & Codeforces statistics.
+            </p>
+          </div>
 
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow-lg shadow-indigo-600/30 flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create New Room</span>
-          </button>
-        </div>
-      </div>
-
-      {/* User Stats Summary Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
-            <Flame className="w-5 h-5 fill-current animate-pulse" />
-          </div>
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Daily Streak</span>
-            <p className="text-lg font-bold text-white">{user?.streakCount || 1} Days 🔥</p>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-            <Award className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Total Points</span>
-            <p className="text-lg font-bold text-white">{user?.points || 0} pts</p>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-            <Code2 className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">My Rooms</span>
-            <p className="text-lg font-bold text-white">{myRooms.length} Active</p>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-            <Globe className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Public Hubs</span>
-            <p className="text-lg font-bold text-white">{publicRooms.length} Available</p>
-          </div>
-        </div>
-      </div>
-
-      {/* My Joined / Owned Coding Rooms */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-            <Code2 className="w-5 h-5 text-indigo-400" />
-            <span>My Active Rooms</span>
-          </h2>
-        </div>
-
-        {myRooms.length === 0 ? (
-          <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800/80 text-center space-y-3">
-            <p className="text-xs text-slate-400">You are not a member of any coding room yet.</p>
+          <div className="flex items-center space-x-3">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition"
+              className="px-5 py-3 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm shadow-xl shadow-cyan-600/30 transition flex items-center space-x-2 border border-cyan-400/20"
             >
-              Create Your First Room
+              <Plus className="w-4 h-4" />
+              <span>Create New Room</span>
             </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {myRooms.map((room) => (
-              <div
-                key={room.id}
-                onClick={() => navigate(`/room/${room.id}`)}
-                className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 transition cursor-pointer space-y-3 group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-1 rounded-lg bg-indigo-600/10 text-indigo-300 font-mono text-xs font-bold border border-indigo-500/30">
-                    {room.roomCode}
-                  </span>
-                  <span className="text-[10px] text-slate-500 uppercase font-mono">{room.language}</span>
-                </div>
 
-                <div>
-                  <h3 className="font-bold text-slate-100 group-hover:text-indigo-300 transition text-base">
-                    {room.name}
-                  </h3>
-                  <p className="text-xs text-slate-400 line-clamp-2 mt-1">
-                    {room.description || 'Collaborative coding room'}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-500">
-                  <span className="flex items-center space-x-1">
-                    <Users className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{room._count?.members || 1} Members</span>
-                  </span>
-                  <span className="text-indigo-400 font-semibold flex items-center space-x-1">
-                    <span>Enter Room</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-              </div>
-            ))}
+            <Link
+              to="/contests"
+              className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-sm transition flex items-center space-x-2 border border-slate-700"
+            >
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span>Contest Arena</span>
+            </Link>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Public Rooms Discovery */}
-      <div className="space-y-4 pt-4">
-        <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-          <Globe className="w-5 h-5 text-cyan-400" />
-          <span>Public Coding Hubs</span>
-        </h2>
+      {/* External Platforms Profile Live Showcase */}
+      {user && (
+        <ExternalProfilesCard
+          stats={externalStats}
+          handles={{
+            leetcodeHandle: user.leetcodeHandle,
+            codeforcesHandle: user.codeforcesHandle,
+            codechefHandle: user.codechefHandle,
+            gfgHandle: user.gfgHandle,
+          }}
+          onOpenEditModal={() => setShowEditHandlesModal(true)}
+        />
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {publicRooms.map((room) => (
-            <div
-              key={room.id}
-              onClick={() => navigate(`/room/${room.id}`)}
-              className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-cyan-500/50 transition cursor-pointer space-y-3 group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="px-2.5 py-1 rounded-lg bg-cyan-600/10 text-cyan-300 font-mono text-xs font-bold border border-cyan-500/30">
-                  {room.roomCode}
-                </span>
-                <span className="text-[10px] text-slate-500 uppercase font-mono">{room.language}</span>
-              </div>
+      {/* Edit Handles Modal */}
+      {showEditHandlesModal && user && (
+        <EditHandlesModal
+          isOpen={showEditHandlesModal}
+          initialHandles={{
+            leetcodeHandle: user.leetcodeHandle,
+            codeforcesHandle: user.codeforcesHandle,
+            codechefHandle: user.codechefHandle,
+            gfgHandle: user.gfgHandle,
+            bio: user.bio,
+          }}
+          onClose={() => setShowEditHandlesModal(false)}
+          onSave={handleSaveHandles}
+        />
+      )}
 
-              <div>
-                <h3 className="font-bold text-slate-100 group-hover:text-cyan-300 transition text-base">
-                  {room.name}
-                </h3>
-                <p className="text-xs text-slate-400 line-clamp-2 mt-1">
-                  {room.description || 'Public programming space'}
-                </p>
-              </div>
+      {/* Rooms Sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* My Collaborative Rooms */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-100 flex items-center space-x-2">
+              <Code2 className="w-5 h-5 text-cyan-400" />
+              <span>My Rooms</span>
+            </h3>
+            <span className="text-xs font-mono text-slate-500">{myRooms.length} Active</span>
+          </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-500">
-                <span className="flex items-center space-x-1">
-                  <Users className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{room._count?.members || 1} Members</span>
-                </span>
-                <span className="text-cyan-400 font-semibold flex items-center space-x-1">
-                  <span>Join Room</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </span>
-              </div>
+          {loading ? (
+            <div className="p-8 text-center text-slate-500 animate-pulse">Loading rooms...</div>
+          ) : myRooms.length === 0 ? (
+            <div className="p-8 text-center bg-slate-900/50 border border-slate-800 rounded-2xl">
+              <p className="text-sm text-slate-400">You have no rooms yet.</p>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="mt-3 text-xs font-bold text-cyan-400 hover:underline"
+              >
+                + Create your first room
+              </button>
             </div>
-          ))}
+          ) : (
+            <div className="space-y-3">
+              {myRooms.map((room) => (
+                <div
+                  key={room.id}
+                  onClick={() => navigate(`/room/${room.id}`)}
+                  className="p-4 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl transition cursor-pointer flex items-center justify-between group"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-bold text-slate-200 group-hover:text-cyan-400 transition">
+                        {room.name}
+                      </h4>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
+                        {room.language}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 font-mono">Code: {room.roomCode}</p>
+                  </div>
+
+                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Public Rooms */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-100 flex items-center space-x-2">
+              <Globe className="w-5 h-5 text-purple-400" />
+              <span>Public Coding Hubs</span>
+            </h3>
+            <span className="text-xs font-mono text-slate-500">{publicRooms.length} Hubs</span>
+          </div>
+
+          {loading ? (
+            <div className="p-8 text-center text-slate-500 animate-pulse">Loading hub rooms...</div>
+          ) : (
+            <div className="space-y-3">
+              {publicRooms.slice(0, 5).map((room) => (
+                <div
+                  key={room.id}
+                  onClick={() => navigate(`/room/${room.id}`)}
+                  className="p-4 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl transition cursor-pointer flex items-center justify-between group"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-bold text-slate-200 group-hover:text-purple-400 transition">
+                        {room.name}
+                      </h4>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
+                        {room.language}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 line-clamp-1">{room.description || 'Public collaborative workspace'}</p>
+                  </div>
+
+                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Create Room Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white flex items-center space-x-2">
-                <Plus className="w-5 h-5 text-indigo-400" />
-                <span>Create Coding Room</span>
-              </h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">
-                ✕
-              </button>
-            </div>
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+            <h3 className="text-xl font-bold text-slate-100 mb-4">Create Collaborative Room</h3>
             <form onSubmit={handleCreateRoom} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Room Name</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Room Name</label>
                 <input
                   type="text"
-                  placeholder="e.g. Apex Algorithm Practice"
+                  required
+                  placeholder="e.g. Apex Algo Studio"
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  required
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Description</label>
-                <input
-                  type="text"
-                  placeholder="Short description of this room's goal"
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Describe your session project..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Language</label>
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="javascript">JavaScript</option>
-                    <option value="python">Python</option>
-                    <option value="typescript">TypeScript</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Privacy</label>
-                  <select
-                    value={isPublic ? 'public' : 'private'}
-                    onChange={(e) => setIsPublic(e.target.value === 'public')}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Primary Language</label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 font-mono"
+                >
+                  <option value="javascript">JavaScript (Node.js)</option>
+                  <option value="typescript">TypeScript</option>
+                  <option value="python">Python 3</option>
+                  <option value="cpp">C++ 20</option>
+                  <option value="java">Java 17</option>
+                  <option value="go">Go</option>
+                  <option value="rust">Rust</option>
+                </select>
               </div>
 
-              <button
-                type="submit"
-                disabled={creating}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition shadow-lg shadow-indigo-600/30 disabled:opacity-50"
-              >
-                {creating ? 'Creating...' : 'Launch Room'}
-              </button>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm shadow-lg shadow-cyan-600/20"
+                >
+                  {creating ? 'Creating...' : 'Create Room'}
+                </button>
+              </div>
             </form>
           </div>
         </div>

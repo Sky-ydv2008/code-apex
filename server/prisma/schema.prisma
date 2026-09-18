@@ -8,23 +8,35 @@ generator client {
 }
 
 model User {
-  id           String       @id @default(uuid())
-  name         String
-  email        String       @unique
-  passwordHash String
-  avatar       String?
-  points       Int          @default(0)
-  streakCount  Int          @default(1)
-  lastActive   DateTime     @default(now())
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id               String       @id @default(uuid())
+  name             String
+  email            String       @unique
+  passwordHash     String
+  avatar           String?
+  points           Int          @default(0)
+  streakCount      Int          @default(1)
+  lastActive       DateTime     @default(now())
+  
+  // External platform handles
+  leetcodeHandle   String?
+  codeforcesHandle String?
+  codechefHandle   String?
+  gfgHandle        String?
+  bio              String?
 
-  ownedRooms   Room[]       @relation("OwnedRooms")
-  memberships  RoomMember[]
-  messages     Message[]
-  aiRequests   AIRequest[]
-  submissions  Submission[]
-  tasksCreated Task[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  ownedRooms         Room[]               @relation("OwnedRooms")
+  memberships        RoomMember[]
+  messages           Message[]
+  aiRequests         AIRequest[]
+  submissions        Submission[]
+  tasksCreated       Task[]
+  contestsCreated    Contest[]            @relation("CreatedContests")
+  contestSubmissions ContestSubmission[]
+  contestEntries     ContestParticipant[]
+  antiCheatLogs      AntiCheatLog[]
 }
 
 model Room {
@@ -151,4 +163,96 @@ model Submission {
 
   challenge     Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Contest {
+  id                String               @id @default(uuid())
+  title             String
+  slug              String               @unique
+  description       String
+  rules             String?
+  startTime         DateTime
+  endTime           DateTime
+  durationMinutes   Int                  @default(60)
+  isPublic          Boolean              @default(true)
+  password          String?
+  antiCheatEnabled  Boolean              @default(true)
+  maxStrikes        Int                  @default(3)
+  createdById       String
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  createdBy         User                 @relation("CreatedContests", fields: [createdById], references: [id], onDelete: Cascade)
+  problems          ContestProblem[]
+  submissions       ContestSubmission[]
+  participants      ContestParticipant[]
+  antiCheatLogs     AntiCheatLog[]
+}
+
+model ContestProblem {
+  id          String              @id @default(uuid())
+  contestId   String
+  title       String
+  slug        String
+  difficulty  String              // EASY, MEDIUM, HARD
+  points      Int                 @default(100)
+  order       Int                 @default(1)
+  description String
+  starterCode String              // JSON object of language -> starter code or string
+  testCases   String              // JSON array of { input, expected, hidden? }
+  hints       String?             // JSON array of strings
+  createdAt   DateTime            @default(now())
+
+  contest     Contest             @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  submissions ContestSubmission[]
+
+  @@unique([contestId, slug])
+}
+
+model ContestSubmission {
+  id              String         @id @default(uuid())
+  contestId       String
+  problemId       String
+  userId          String
+  code            String
+  language        String
+  status          String         // ACCEPTED, WRONG_ANSWER, COMPILE_ERROR, TIME_LIMIT_EXCEEDED
+  passCount       Int            @default(0)
+  totalCount      Int            @default(0)
+  executionTimeMs Float?
+  score           Int            @default(0)
+  createdAt       DateTime       @default(now())
+
+  contest         Contest        @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  problem         ContestProblem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ContestParticipant {
+  id             String    @id @default(uuid())
+  contestId      String
+  userId         String
+  score          Int       @default(0)
+  totalTimeMs    Int       @default(0)
+  strikes        Int       @default(0)
+  isDisqualified Boolean   @default(false)
+  joinedAt       DateTime  @default(now())
+
+  contest        Contest   @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contestId, userId])
+}
+
+model AntiCheatLog {
+  id          String   @id @default(uuid())
+  contestId   String?
+  userId      String
+  eventType   String   // TAB_SWITCH, FULLSCREEN_EXIT, PASTE_ATTEMPT, DEVTOOLS_OPEN
+  details     String?
+  strikeIndex Int
+  createdAt   DateTime @default(now())
+
+  contest     Contest? @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

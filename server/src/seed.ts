@@ -2,20 +2,29 @@ import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 
 async function seed() {
-  console.log('🌱 Seeding CodeCraft AI database...');
+  console.log('🌱 Seeding CodeApex database...');
 
-  // Create Demo User
+  // Create Demo User with linked platform handles
   const passwordHash = await bcrypt.hash('demo123456', 10);
   const demoUser = await prisma.user.upsert({
-    where: { email: 'demo@codecraft.ai' },
-    update: {},
+    where: { email: 'demo@codeapex.io' },
+    update: {
+      leetcodeHandle: 'sky_ydv',
+      codeforcesHandle: 'tourist',
+      codechefHandle: 'sky_code',
+      gfgHandle: 'sky_apex',
+    },
     create: {
-      name: 'Apex Innovator',
-      email: 'demo@codecraft.ai',
+      name: 'Sky Apex',
+      email: 'demo@codeapex.io',
       passwordHash,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
-      points: 450,
-      streakCount: 5,
+      points: 1250,
+      streakCount: 14,
+      leetcodeHandle: 'sky_ydv',
+      codeforcesHandle: 'tourist',
+      codechefHandle: 'sky_code',
+      gfgHandle: 'sky_apex',
+      bio: 'Competitive programmer & full-stack architect building CodeApex.',
     },
   });
 
@@ -26,10 +35,10 @@ async function seed() {
     where: { roomCode: 'APEX01' },
     update: {},
     create: {
-      name: 'Apex Innovators Public Studio',
+      name: 'Apex Collaborative Hub',
       roomCode: 'APEX01',
-      description: 'Public real-time coding workspace for JavaScript and Python developers.',
-      language: 'javascript',
+      description: 'Real-time multi-language collaborative workspace for team coding',
+      language: 'typescript',
       isPublic: true,
       ownerId: demoUser.id,
       members: {
@@ -40,44 +49,43 @@ async function seed() {
       },
       projects: {
         create: {
-          name: 'Main Workspace',
-          description: 'Default project folder',
+          name: 'Main Application',
+          description: 'Apex core system files',
           files: {
             create: [
               {
-                name: 'index.js',
-                path: 'index.js',
-                language: 'javascript',
-                content: `// Welcome to CodeCraft AI Collaborative Workspace!
-// Try running this code or asking AI to explain/debug/optimize it.
+                name: 'index.ts',
+                path: '/index.ts',
+                language: 'typescript',
+                content: `// Welcome to CodeApex Real-Time Collaborative Workspace!
+// Multi-language execution engine powered by Piston & Proctor Anti-Cheat system.
 
-function calculateFibonacci(n) {
-  if (n <= 1) return n;
-  let a = 0, b = 1;
-  for (let i = 2; i <= n; i++) {
-    let temp = a + b;
-    a = b;
-    b = temp;
-  }
-  return b;
+function calculateApexScore(submissions: number, accuracy: number): number {
+  console.log("⚡ Calculating Apex Developer Score...");
+  return Math.round((submissions * accuracy) * 1.5);
 }
 
-console.log("Fibonacci(10) =", calculateFibonacci(10));
-console.log("Fibonacci(20) =", calculateFibonacci(20));
+const score = calculateApexScore(42, 94.5);
+console.log(\`🚀 Current Apex Rank Score: \${score} Points\`);
 `,
               },
               {
-                name: 'main.py',
-                path: 'main.py',
+                name: 'solution.py',
+                path: '/solution.py',
                 language: 'python',
-                content: `# Welcome to CodeCraft AI Python Sandbox!
+                content: `# CodeApex Python Multi-Language Runner
+import math
 
-def is_palindrome(text: str) -> bool:
-    cleaned = ''.join(c.lower() for c in text if c.isalnum())
-    return cleaned == cleaned[::-1]
+def fibonacci_sequence(n: int):
+    a, b = 0, 1
+    result = []
+    for _ in range(n):
+        result.append(a)
+        a, b = b, a + b
+    return result
 
-test_phrase = "A man, a plan, a canal: Panama"
-print(f"Is '{test_phrase}' a palindrome?", is_palindrome(test_phrase))
+print("🐍 Python 3 Execution:")
+print("Fibonacci (10 terms):", fibonacci_sequence(10))
 `,
               },
             ],
@@ -89,113 +97,92 @@ print(f"Is '{test_phrase}' a palindrome?", is_palindrome(test_phrase))
 
   console.log('🏠 Created demo room:', demoRoom.name, `(Code: ${demoRoom.roomCode})`);
 
-  // Create Coding Challenges
+  // Create Sample Contests
+  const contest1 = await prisma.contest.upsert({
+    where: { slug: 'codeapex-grand-championship-2026' },
+    update: {},
+    create: {
+      title: 'CodeApex Grand Championship 2026',
+      slug: 'codeapex-grand-championship-2026',
+      description: 'The ultimate online competitive coding contest featuring real-time proctoring and multi-language support.',
+      rules: '1. Tab switching will trigger immediate proctor warnings.\n2. Fullscreen mode is strictly enforced.\n3. 3 strikes result in automatic disqualification.',
+      startTime: new Date(Date.now() - 3600000), // started 1 hr ago
+      endTime: new Date(Date.now() + 86400000), // ends in 24 hrs
+      durationMinutes: 120,
+      isPublic: true,
+      antiCheatEnabled: true,
+      maxStrikes: 3,
+      createdById: demoUser.id,
+      problems: {
+        create: [
+          {
+            title: 'Apex Subarray Maximum',
+            slug: 'apex-subarray-maximum',
+            difficulty: 'EASY',
+            points: 100,
+            order: 1,
+            description: 'Given an array of numbers, find the contiguous subarray with the largest sum and return its sum.',
+            starterCode: 'function maxSubArray(nums) {\n  // Write your solution here\n}',
+            testCases: JSON.stringify([
+              { input: '[-2,1,-3,4,-1,2,1,-5,4]', expected: '6' },
+              { input: '[1]', expected: '1' },
+              { input: '[5,4,-1,7,8]', expected: '23' },
+            ]),
+            hints: JSON.stringify(['Use Kadane\'s algorithm for O(n) time complexity.']),
+          },
+          {
+            title: 'Valid Parentheses Lock',
+            slug: 'valid-parentheses-lock',
+            difficulty: 'MEDIUM',
+            points: 200,
+            order: 2,
+            description: 'Given a string `s` containing just the characters `(`, `)`, `{`, `}`, `[` and `]`, determine if the input string is valid.',
+            starterCode: 'function isValid(s) {\n  // Return true or false\n}',
+            testCases: JSON.stringify([
+              { input: '()[]{}', expected: 'true' },
+              { input: '(]', expected: 'false' },
+              { input: '{[]}', expected: 'true' },
+            ]),
+            hints: JSON.stringify(['Use a Stack data structure to track opening brackets.']),
+          },
+        ],
+      },
+    },
+  });
+
+  console.log('🏆 Created sample contest:', contest1.title);
+
+  // Seed Coding Challenges
   const challenges = [
     {
-      title: 'Two Sum',
-      slug: 'two-sum',
+      title: 'Two Sum Apex',
+      slug: 'two-sum-apex',
       difficulty: 'EASY',
       category: 'Arrays',
-      description: `Given an array of integers \`nums\` and an integer \`target\`, return indices of the two numbers such that they add up to \`target\`.
-
-Assume that each input would have **exactly one solution**, and you may not use the same element twice.
-
-**Example 1:**
-\`\`\`
-Input: nums = [2,7,11,15], target = 9
-Output: [0,1]
-Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].
-\`\`\``,
-      starterCode: `function twoSum(nums, target) {
-  // Your code here
-  const map = new Map();
-  for (let i = 0; i < nums.length; i++) {
-    const diff = target - nums[i];
-    if (map.has(diff)) {
-      return [map.get(diff), i];
-    }
-    map.set(nums[i], i);
-  }
-  return [];
-}
-
-console.log(twoSum([2, 7, 11, 15], 9));
-`,
+      description: 'Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.',
+      starterCode: 'function twoSum(nums, target) {\n  // Write code here\n}',
       language: 'javascript',
       testCases: JSON.stringify([
-        { input: 'twoSum([2, 7, 11, 15], 9)', expected: '[0, 1]' },
-        { input: 'twoSum([3, 2, 4], 6)', expected: '[1, 2]' },
-        { input: 'twoSum([3, 3], 6)', expected: '[0, 1]' },
+        { input: '[2,7,11,15]\n9', expected: '[0, 1]' },
+        { input: '[3,2,4]\n6', expected: '[1, 2]' },
       ]),
-      hints: JSON.stringify([
-        'A brute force approach uses nested loops O(N^2). Can you use a Hash Map to do it in O(N)?',
-        'Store each number index in a hash map as you iterate.',
-        'Check if (target - currentNumber) exists in your map.'
-      ]),
+      hints: JSON.stringify(['Use a hash map to store seen values and their indices.']),
       points: 50,
     },
     {
-      title: 'Valid Palindrome',
-      slug: 'valid-palindrome',
+      title: 'Reverse String Matrix',
+      slug: 'reverse-string-matrix',
       difficulty: 'EASY',
       category: 'Strings',
-      description: `A phrase is a **palindrome** if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.
-
-Given a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherwise.`,
-      starterCode: `function isPalindrome(s) {
-  // Your code here
-  const clean = s.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return clean === clean.split('').reverse().join('');
-}
-
-console.log(isPalindrome("A man, a plan, a canal: Panama"));
-`,
+      description: 'Write a function that reverses a string.',
+      starterCode: 'function reverseString(s) {\n  return s.split("").reverse().join("");\n}',
       language: 'javascript',
       testCases: JSON.stringify([
-        { input: 'isPalindrome("A man, a plan, a canal: Panama")', expected: 'true' },
-        { input: 'isPalindrome("race a car")', expected: 'false' },
-        { input: 'isPalindrome(" ")', expected: 'true' },
+        { input: '"hello"', expected: '"olleh"' },
+        { input: '"Apex"', expected: '"xepA"' },
       ]),
-      hints: JSON.stringify([
-        'Filter out non-alphanumeric characters first using regex.',
-        'Compare the string with its reverse or use two pointers from left and right.'
-      ]),
+      hints: JSON.stringify(['Two pointers technique or built-in reverse string methods.']),
       points: 50,
-    },
-    {
-      title: 'Fibonacci Number',
-      slug: 'fibonacci-number',
-      difficulty: 'MEDIUM',
-      category: 'Dynamic Programming',
-      description: `The **Fibonacci numbers**, commonly denoted \`F(n)\`, form a sequence such that each number is the sum of the two preceding ones, starting from \`0\` and \`1\`.
-
-Given \`n\`, calculate \`F(n)\`.`,
-      starterCode: `function fib(n) {
-  // Your code here
-  if (n <= 1) return n;
-  let a = 0, b = 1;
-  for (let i = 2; i <= n; i++) {
-    let c = a + b;
-    a = b;
-    b = c;
-  }
-  return b;
-}
-
-console.log(fib(10));
-`,
-      language: 'javascript',
-      testCases: JSON.stringify([
-        { input: 'fib(2)', expected: '1' },
-        { input: 'fib(3)', expected: '2' },
-        { input: 'fib(4)', expected: '3' },
-        { input: 'fib(10)', expected: '55' },
-      ]),
-      hints: JSON.stringify([
-        'Recursion takes O(2^N) time. Can you do it in O(N) using dynamic programming?',
-        'Maintain two variables for F(n-1) and F(n-2).'
-      ]),
-      points: 100,
     },
   ];
 

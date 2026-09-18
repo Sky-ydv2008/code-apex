@@ -4,6 +4,7 @@ import { api } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
+  setUser: (user: User | null) => void;
   token: string | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
@@ -51,7 +52,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginAsDemo = async () => {
-    await login('demo@codecraft.ai', 'demo123456');
+    try {
+      await login('demo@codeapex.io', 'demo123456');
+    } catch {
+      await login('demo@codecraft.ai', 'demo123456');
+    }
   };
 
   const logout = () => {
@@ -61,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, loginAsDemo, logout }}>
+    <AuthContext.Provider value={{ user, setUser, token, loading, login, register, loginAsDemo, logout }}>
       {children}
     </AuthContext.Provider>
   );

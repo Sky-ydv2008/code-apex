@@ -1,4 +1,16 @@
-import { User, Room, Project, FileItem, AIResponse, ExecutionResult, Challenge, LeaderboardUser } from '../types';
+import {
+  User,
+  Room,
+  Project,
+  FileItem,
+  AIResponse,
+  ExecutionResult,
+  Challenge,
+  LeaderboardUser,
+  Contest,
+  ContestParticipant,
+  CombinedProfileStats,
+} from '../types';
 
 const API_BASE = '/api';
 
@@ -19,11 +31,11 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
     },
   });
 
-  const data = await res.json();
+  const data = (await res.json()) as T & { error?: string };
   if (!res.ok) {
     throw new Error(data.error || 'API Request failed');
   }
-  return data as T;
+  return data;
 }
 
 export const api = {
@@ -61,13 +73,13 @@ export const api = {
   getUserRooms: () => fetchJSON<{ rooms: Room[] }>('/rooms/my-rooms'),
 
   addTask: (roomId: string, title: string) =>
-    fetchJSON<{ task: any }>('/rooms/tasks', {
+    fetchJSON<{ task: unknown }>('/rooms/tasks', {
       method: 'POST',
       body: JSON.stringify({ roomId, title }),
     }),
 
   toggleTask: (taskId: string, completed: boolean) =>
-    fetchJSON<{ task: any }>(`/rooms/tasks/${taskId}`, {
+    fetchJSON<{ task: unknown }>(`/rooms/tasks/${taskId}`, {
       method: 'PATCH',
       body: JSON.stringify({ completed }),
     }),
@@ -107,10 +119,10 @@ export const api = {
     }),
 
   // Code Execution
-  runCode: (code: string, language: string) =>
+  runCode: (code: string, language: string, stdinInput: string = '') =>
     fetchJSON<ExecutionResult>('/code/run', {
       method: 'POST',
-      body: JSON.stringify({ code, language }),
+      body: JSON.stringify({ code, language, stdinInput }),
     }),
 
   // Challenges
@@ -121,16 +133,95 @@ export const api = {
 
   submitChallenge: (challengeId: string, code: string) =>
     fetchJSON<{
-      status: string;
-      submission: any;
-      testResults: Array<{ input: string; expected: string; actual: string; passed: boolean }>;
-      executionTimeMs: number;
-      stdout: string;
-      stderr: string;
+      submission: unknown;
+      isPassed: boolean;
+      passCount: number;
+      totalCount: number;
     }>('/challenges/submit', {
       method: 'POST',
       body: JSON.stringify({ challengeId, code }),
     }),
 
   getLeaderboard: () => fetchJSON<{ leaderboard: LeaderboardUser[] }>('/challenges/leaderboard'),
+
+  // Contests
+  getContests: () => fetchJSON<{ contests: Contest[] }>('/contests'),
+
+  getContest: (idOrSlug: string) =>
+    fetchJSON<{ contest: Contest; participant: ContestParticipant | null }>(`/contests/${idOrSlug}`),
+
+  createContest: (payload: {
+    title: string;
+    description: string;
+    rules?: string;
+    startTime: string;
+    endTime: string;
+    durationMinutes?: number;
+    antiCheatEnabled?: boolean;
+    maxStrikes?: number;
+  }) =>
+    fetchJSON<{ contest: Contest }>('/contests', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  joinContest: (contestId: string) =>
+    fetchJSON<{ participant: ContestParticipant }>(`/contests/${contestId}/join`, {
+      method: 'POST',
+    }),
+
+  submitContestProblem: (contestId: string, problemId: string, code: string, language: string) =>
+    fetchJSON<{
+      submission: unknown;
+      isPassed: boolean;
+      passCount: number;
+      totalCount: number;
+      status: string;
+      score: number;
+    }>(`/contests/${contestId}/problems/${problemId}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ code, language }),
+    }),
+
+  logContestAntiCheat: (contestId: string, eventType: string, details?: string) =>
+    fetchJSON<{
+      strikes: number;
+      maxStrikes: number;
+      isDisqualified: boolean;
+      warningMessage: string;
+    }>(`/contests/${contestId}/anti-cheat`, {
+      method: 'POST',
+      body: JSON.stringify({ eventType, details }),
+    }),
+
+  getContestLeaderboard: (contestId: string) =>
+    fetchJSON<{ leaderboard: Array<unknown> }>(`/contests/${contestId}/leaderboard`),
+
+  // External Platform Profiles
+  getMyExternalProfile: () =>
+    fetchJSON<{
+      handles: User;
+      stats: CombinedProfileStats;
+    }>('/external-profile/me'),
+
+  getUserExternalProfile: (userId: string) =>
+    fetchJSON<{
+      handles: User;
+      stats: CombinedProfileStats;
+    }>(`/external-profile/user/${userId}`),
+
+  updateExternalHandles: (payload: {
+    leetcodeHandle?: string;
+    codeforcesHandle?: string;
+    codechefHandle?: string;
+    gfgHandle?: string;
+    bio?: string;
+  }) =>
+    fetchJSON<{
+      user: User;
+      stats: CombinedProfileStats;
+    }>('/external-profile/handles', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };

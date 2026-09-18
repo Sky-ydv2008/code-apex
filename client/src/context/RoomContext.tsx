@@ -24,6 +24,7 @@ interface RoomContextType {
   aiResponse: AIResponse | null;
   isAILoading: boolean;
   activeAITab: string;
+  socket: Socket | null;
   setActiveAITab: (tab: string) => void;
   setActiveFile: (file: FileItem) => void;
   emitCodeUpdate: (content: string) => void;
@@ -41,103 +42,113 @@ interface RoomContextType {
 
 const RoomContext = createContext<RoomContextType | undefined>(undefined);
 
-export const RoomProvider: React.FC<{ roomIdOrCode: string; children: React.ReactNode }> = ({ roomIdOrCode, children }) => {
+export const RoomProvider: React.FC<{ roomIdOrCode: string; children: React.ReactNode }> = ({
+  roomIdOrCode,
+  children,
+}) => {
   const { user } = useAuth();
   const [room, setRoom] = useState<Room | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
-  const [activeFile, setActiveFile] = useState<FileItem | null>(null);
+  const [activeFile, setActiveFileState] = useState<FileItem | null>(null);
   const [activeMembers, setActiveMembers] = useState<ActiveMember[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [tasks, setTasks] = useState<RoomTask[]>([]);
+
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
-  const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+
   const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
-  const [isAILoading, setIsAILoading] = useState<boolean>(false);
-  const [activeAITab, setActiveAITab] = useState<string>('explain');
+  const [isAILoading, setIsAILoading] = useState(false);
+  const [activeAITab, setActiveAITab] = useState('explain');
 
   const socketRef = useRef<Socket | null>(null);
 
-  const refreshRoom = async (targetId: string) => {
+  const refreshRoom = async (targetIdOrCode: string) => {
     try {
-      const res = await api.getRoom(targetId);
+      const res = await api.getRoom(targetIdOrCode);
       setRoom(res.room);
+
       if (res.room.projects?.[0]?.files) {
-        const loadedFiles = res.room.projects[0].files;
-        setFiles(loadedFiles);
-        if (!activeFile && loadedFiles.length > 0) {
-          setActiveFile(loadedFiles[0]);
-        } else if (activeFile) {
-          const updatedActive = loadedFiles.find(f => f.id === activeFile.id);
-          if (updatedActive) setActiveFile(updatedActive);
+        setFiles(res.room.projects[0].files);
+        if (!activeFile && res.room.projects[0].files.length > 0) {
+          setActiveFileState(res.room.projects[0].files[0]);
         }
       }
-      if (res.room.tasks) setTasks(res.room.tasks);
-      if (res.room.messages) setMessages(res.room.messages);
+
+      if (res.room.tasks) {
+        setTasks(res.room.tasks);
+      }
+      if (res.room.messages) {
+        setMessages(res.room.messages);
+      }
     } catch (err) {
-      console.error('Failed to load room:', err);
+      console.error('Failed to load room details:', err);
     }
   };
 
   useEffect(() => {
     refreshRoom(roomIdOrCode);
-  }, [roomIdOrCode]);
 
-  useEffect(() => {
-    if (!room || !user) return;
-
-    const socket = io('/', {
-      transports: ['websocket', 'polling'],
-    });
+    const socketServerUrl = window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin;
+    const socket = io(socketServerUrl);
     socketRef.current = socket;
 
-    socket.emit('room:join', {
-      roomId: room.id,
-      user: { userId: user.id, name: user.name, avatar: user.avatar },
-    });
+    if (user && room) {
+      socket.emit('room:join', {
+        roomId: room.id,
+        user: { userId: user.id, name: user.name, avatar: user.avatar },
+      });
+    }
 
     socket.on('room:members', (members: ActiveMember[]) => {
       setActiveMembers(members);
     });
 
-    socket.on('user:joined', (data: { user: any; members: ActiveMember[] }) => {
-      setActiveMembers(data.members);
+    socket.on('user:joined', (data: { socketId: string; user: { userId: string; name: string; avatar?: string } }) => {
+      setActiveMembers((prev) => [...prev.filter((m) => m.socketId !== data.socketId), { socketId: data.socketId, ...data.user }]);
     });
 
-    socket.on('user:left', (data: { members: ActiveMember[] }) => {
-      setActiveMembers(data.members);
+    socket.on('user:left', (data: { socketId: string }) => {
+      setActiveMembers((prev) => prev.filter((m) => m.socketId !== data.socketId));
     });
 
     socket.on('code:update', (data: { fileId: string; content: string }) => {
       setFiles((prev) =>
         prev.map((f) => (f.id === data.fileId ? { ...f, content: data.content } : f))
       );
-      setActiveFile((prev) => (prev && prev.id === data.fileId ? { ...prev, content: data.content } : prev));
-    });
-
-    socket.on('code:cursor', (data: { socketId: string; userId: string; name: string; fileId: string; cursor: any }) => {
-      setActiveMembers((prev) =>
-        prev.map((m) => (m.socketId === data.socketId ? { ...m, cursor: { ...data.cursor, fileId: data.fileId } } : m))
-      );
+      if (activeFile?.id === data.fileId) {
+        setActiveFileState((prev) => (prev ? { ...prev, content: data.content } : null));
+      }
     });
 
     socket.on('chat:message', (msg: ChatMessage) => {
       setMessages((prev) => [...prev, msg]);
     });
 
-    socket.on('file:tree_change', () => {
-      refreshRoom(room.id);
+    socket.on('task:update', (updatedTask: RoomTask) => {
+      setTasks((prev) => {
+        const exists = prev.some((t) => t.id === updatedTask.id);
+        if (exists) {
+          return prev.map((t) => (t.id === updatedTask.id ? updatedTask : t));
+        }
+        return [...prev, updatedTask];
+      });
     });
 
     return () => {
+      socket.emit('room:leave');
       socket.disconnect();
     };
-  }, [room?.id, user?.id]);
+  }, [roomIdOrCode, user?.id, room?.id]);
+
+  const setActiveFile = (file: FileItem) => {
+    setActiveFileState(file);
+  };
 
   const emitCodeUpdate = (content: string) => {
     if (!activeFile || !room) return;
-    setActiveFile((prev) => (prev ? { ...prev, content } : null));
+    setActiveFileState((prev) => (prev ? { ...prev, content } : null));
     setFiles((prev) => prev.map((f) => (f.id === activeFile.id ? { ...f, content } : f)));
-
     socketRef.current?.emit('code:update', {
       roomId: room.id,
       fileId: activeFile.id,
@@ -167,14 +178,16 @@ export const RoomProvider: React.FC<{ roomIdOrCode: string; children: React.Reac
   const addTask = async (title: string) => {
     if (!room) return;
     const res = await api.addTask(room.id, title);
-    setTasks((prev) => [...prev, res.task]);
-    socketRef.current?.emit('task:update', { roomId: room.id, task: res.task });
+    const createdTask = res.task as RoomTask;
+    setTasks((prev) => [...prev, createdTask]);
+    socketRef.current?.emit('task:update', { roomId: room.id, task: createdTask });
   };
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     if (!room) return;
     const res = await api.toggleTask(taskId, completed);
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? res.task : t)));
+    const updatedTask = res.task as RoomTask;
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? updatedTask : t)));
   };
 
   const createFile = async (name: string, language: string) => {
@@ -182,7 +195,7 @@ export const RoomProvider: React.FC<{ roomIdOrCode: string; children: React.Reac
     const projectId = room.projects[0].id;
     const res = await api.createFile(projectId, name, name, language, '');
     setFiles((prev) => [...prev, res.file]);
-    setActiveFile(res.file);
+    setActiveFileState(res.file);
     socketRef.current?.emit('file:tree_change', { roomId: room.id });
   };
 
@@ -192,7 +205,7 @@ export const RoomProvider: React.FC<{ roomIdOrCode: string; children: React.Reac
     setFiles((prev) => {
       const filtered = prev.filter((f) => f.id !== fileId);
       if (activeFile?.id === fileId && filtered.length > 0) {
-        setActiveFile(filtered[0]);
+        setActiveFileState(filtered[0]);
       }
       return filtered;
     });
@@ -205,13 +218,14 @@ export const RoomProvider: React.FC<{ roomIdOrCode: string; children: React.Reac
     try {
       const res = await api.runCode(activeFile.content, activeFile.language);
       setExecutionResult(res);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Execution failed';
       setExecutionResult({
         stdout: '',
-        stderr: `Execution failed: ${err.message}`,
+        stderr: `Execution failed: ${msg}`,
         exitCode: 1,
         executionTimeMs: 0,
-        error: err.message,
+        error: msg,
       });
     } finally {
       setIsExecuting(false);
@@ -225,10 +239,14 @@ export const RoomProvider: React.FC<{ roomIdOrCode: string; children: React.Reac
     try {
       const res = await api.processAI(type, activeFile.content, prompt, activeFile.language, room?.id);
       setAiResponse(res);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'AI processing failed';
       setAiResponse({
+        id: Date.now().toString(),
         type,
-        result: `AI processing failed: ${err.message}`,
+        input: activeFile.content,
+        output: `AI processing failed: ${msg}`,
+        createdAt: new Date().toISOString(),
       });
     } finally {
       setIsAILoading(false);
@@ -254,6 +272,7 @@ export const RoomProvider: React.FC<{ roomIdOrCode: string; children: React.Reac
         aiResponse,
         isAILoading,
         activeAITab,
+        socket: socketRef.current,
         setActiveAITab,
         setActiveFile,
         emitCodeUpdate,

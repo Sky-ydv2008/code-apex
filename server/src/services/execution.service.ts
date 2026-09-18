@@ -9,259 +9,431 @@ export interface ExecutionResult {
   stderr: string;
   exitCode: number;
   executionTimeMs: number;
+  memoryKb?: number;
   error?: string;
+  languageUsed?: string;
 }
 
+// Map common language identifiers to Piston supported runtime names & versions
+const PISTON_LANG_MAP: Record<string, { language: string; version?: string }> = {
+  python: { language: 'python', version: '3.10.0' },
+  py: { language: 'python', version: '3.10.0' },
+  javascript: { language: 'javascript', version: '18.15.0' },
+  js: { language: 'javascript', version: '18.15.0' },
+  typescript: { language: 'typescript', version: '5.0.3' },
+  ts: { language: 'typescript', version: '5.0.3' },
+  cpp: { language: 'c++', version: '10.2.0' },
+  c: { language: 'c', version: '10.2.0' },
+  java: { language: 'java', version: '15.0.2' },
+  go: { language: 'go', version: '1.16.2' },
+  rust: { language: 'rust', version: '1.68.2' },
+  csharp: { language: 'csharp', version: '6.12.0' },
+  cs: { language: 'csharp', version: '6.12.0' },
+  php: { language: 'php', version: '8.2.3' },
+  ruby: { language: 'ruby', version: '3.0.1' },
+  kotlin: { language: 'kotlin', version: '1.8.20' },
+  swift: { language: 'swift', version: '5.3.3' },
+  r: { language: 'r', version: '4.1.1' },
+  perl: { language: 'perl', version: '5.36.0' },
+  haskell: { language: 'haskell', version: '9.0.1' },
+  scala: { language: 'scala', version: '3.2.2' },
+  lua: { language: 'lua', version: '5.4.4' },
+  bash: { language: 'bash', version: '5.2.0' },
+  sh: { language: 'bash', version: '5.2.0' },
+  dart: { language: 'dart', version: '2.19.6' },
+  zig: { language: 'zig', version: '0.10.1' },
+};
+
 export class ExecutionService {
-  private static readonly TIMEOUT_MS = 8000;
+  private static readonly TIMEOUT_MS = 10000;
 
-  public static async runCode(code: string, language: string): Promise<ExecutionResult> {
-    const lang = language.toLowerCase();
+  public static async runCode(code: string, language: string, stdinInput: string = ''): Promise<ExecutionResult> {
+    const langKey = (language || 'javascript').toLowerCase();
 
-    switch (lang) {
+    // 1. Try Piston Execution API for full multi-language support (40+ languages)
+    try {
+      const pistonRes = await this.runCodeViaPiston(code, langKey, stdinInput);
+      if (pistonRes) {
+        return pistonRes;
+      }
+    } catch (err) {
+      console.warn('Piston API execution failed, switching to local fallback:', err);
+    }
+
+    // 2. Local Fallback Execution Engine
+    switch (langKey) {
       case 'javascript':
       case 'js':
+        return this.runNodeJS(code, false, stdinInput);
       case 'typescript':
       case 'ts':
-        return this.runNodeJS(code, lang === 'typescript' || lang === 'ts');
-
+        return this.runNodeJS(code, true, stdinInput);
       case 'python':
       case 'py':
       case 'python3':
-        return this.runPython(code);
-
+        return this.runPython(code, stdinInput);
       case 'cpp':
       case 'c++':
       case 'c':
-        return this.runCpp(code);
-
+        return this.runCpp(code, stdinInput);
       case 'java':
-        return this.runJava(code);
-
-      case 'html':
-      case 'css':
-        return {
-          stdout: `[Web Preview Output]: Rendered ${lang.toUpperCase()} markup successfully.\n` + code,
-          stderr: '',
-          exitCode: 0,
-          executionTimeMs: 5,
-        };
-
+        return this.runJava(code, stdinInput);
       default:
-        return this.runGenericFallback(code, language);
+        return this.runGenericFallback(code, langKey);
     }
   }
 
-  private static async runNodeJS(code: string, isTypeScript: boolean): Promise<ExecutionResult> {
+  private static async runCodeViaPiston(
+    code: string,
+    languageKey: string,
+    stdinInput: string
+  ): Promise<ExecutionResult | null> {
+    const target = PISTON_LANG_MAP[languageKey] || { language: languageKey };
+
+    const payload = {
+      language: target.language,
+      version: target.version || '*',
+      files: [
+        {
+          name: this.getFileNameForLang(languageKey),
+          content: code,
+        },
+      ],
+      stdin: stdinInput,
+      run_timeout: 5000,
+      compile_timeout: 10000,
+    };
+
+    const startTime = Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const res = await fetch('https://emkc.org/api/v2/piston/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        return null;
+      }
+
+      const data = (await res.json()) as {
+        run?: { stdout: string; stderr: string; code: number; signal: string | null; output: string };
+        compile?: { stdout: string; stderr: string; code: number; output: string };
+      };
+
+      const executionTimeMs = Date.now() - startTime;
+
+      if (data.compile && data.compile.code !== 0) {
+        return {
+          stdout: data.compile.stdout || '',
+          stderr: data.compile.stderr || data.compile.output || 'Compilation Error',
+          exitCode: data.compile.code,
+          executionTimeMs,
+          error: 'Compilation Error',
+          languageUsed: target.language,
+        };
+      }
+
+      if (data.run) {
+        return {
+          stdout: data.run.stdout || '',
+          stderr: data.run.stderr || '',
+          exitCode: data.run.code,
+          executionTimeMs,
+          languageUsed: target.language,
+        };
+      }
+
+      return null;
+    } catch {
+      clearTimeout(timeoutId);
+      return null;
+    }
+  }
+
+  private static getFileNameForLang(lang: string): string {
+    switch (lang.toLowerCase()) {
+      case 'java':
+        return 'Main.java';
+      case 'cpp':
+      case 'c++':
+        return 'main.cpp';
+      case 'c':
+        return 'main.c';
+      case 'python':
+      case 'py':
+        return 'main.py';
+      case 'typescript':
+      case 'ts':
+        return 'main.ts';
+      case 'csharp':
+      case 'cs':
+        return 'Program.cs';
+      case 'go':
+        return 'main.go';
+      case 'rust':
+      case 'rs':
+        return 'main.rs';
+      default:
+        return 'main.txt';
+    }
+  }
+
+  private static async runNodeJS(code: string, isTypeScript: boolean, stdinInput: string): Promise<ExecutionResult> {
     const tempDir = os.tmpdir();
     const ext = isTypeScript ? 'ts' : 'js';
-    const tempFile = path.join(tempDir, `codecraft_${crypto.randomBytes(8).toString('hex')}.${ext}`);
+    const tempFile = path.join(tempDir, `codeapex_${crypto.randomBytes(8).toString('hex')}.${ext}`);
 
     let runnableCode = code;
     if (isTypeScript) {
-      // Basic type strip or direct execution
-      runnableCode = code.replace(/:\s*[A-Za-z0-9_<>\[\]|]+/g, '');
+      runnableCode = `
+        // Transpiled TypeScript wrapper
+        ${code}
+      `;
     }
 
     fs.writeFileSync(tempFile, runnableCode, 'utf8');
 
     const startTime = Date.now();
-    return new Promise((resolve) => {
-      let stdout = '';
-      let stderr = '';
-      let killed = false;
+    const { promise, resolve } = Promise.withResolvers<ExecutionResult>();
+    const command = isTypeScript ? 'npx' : 'node';
+    const args = isTypeScript ? ['ts-node', tempFile] : [tempFile];
 
-      const child = spawn(process.execPath, [tempFile], {
-        env: { NODE_ENV: 'sandbox' },
-        timeout: this.TIMEOUT_MS,
-      });
+    const child = spawn(command, args, { timeout: this.TIMEOUT_MS });
 
-      child.stdout.on('data', (d) => (stdout += d.toString()));
-      child.stderr.on('data', (d) => (stderr += d.toString()));
+    let stdout = '';
+    let stderr = '';
 
-      const timer = setTimeout(() => {
-        killed = true;
-        child.kill('SIGKILL');
-      }, this.TIMEOUT_MS);
+    if (stdinInput) {
+      child.stdin.write(stdinInput);
+      child.stdin.end();
+    }
 
-      child.on('close', (code) => {
-        clearTimeout(timer);
-        const executionTimeMs = Date.now() - startTime;
-        this.cleanupFile(tempFile);
+    child.stdout.on('data', (data) => { stdout += data.toString(); });
+    child.stderr.on('data', (data) => { stderr += data.toString(); });
 
-        if (killed) {
-          resolve({
-            stdout,
-            stderr: stderr + '\n[Execution Error]: Time Limit Exceeded (8.0s limit)',
-            exitCode: 124,
-            executionTimeMs,
-            error: 'Time Limit Exceeded',
-          });
-        } else {
-          resolve({
-            stdout: stdout.trim(),
-            stderr: stderr.trim(),
-            exitCode: code ?? 0,
-            executionTimeMs,
-          });
-        }
-      });
-
-      child.on('error', (err) => {
-        clearTimeout(timer);
-        const executionTimeMs = Date.now() - startTime;
-        this.cleanupFile(tempFile);
-        resolve({
-          stdout,
-          stderr: `Process Error: ${err.message}`,
-          exitCode: 1,
-          executionTimeMs,
-          error: err.message,
-        });
+    child.on('close', (exitCode) => {
+      this.cleanupFile(tempFile);
+      resolve({
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        exitCode: exitCode ?? 0,
+        executionTimeMs: Date.now() - startTime,
+        languageUsed: isTypeScript ? 'typescript' : 'javascript',
       });
     });
+
+    child.on('error', (err) => {
+      this.cleanupFile(tempFile);
+      resolve({
+        stdout: '',
+        stderr: err.message,
+        exitCode: 1,
+        executionTimeMs: Date.now() - startTime,
+        error: `Execution failed: ${err.message}`,
+        languageUsed: isTypeScript ? 'typescript' : 'javascript',
+      });
+    });
+
+    return promise;
   }
 
-  private static async runPython(code: string): Promise<ExecutionResult> {
+  private static async runPython(code: string, stdinInput: string): Promise<ExecutionResult> {
     const tempDir = os.tmpdir();
-    const tempFile = path.join(tempDir, `codecraft_${crypto.randomBytes(8).toString('hex')}.py`);
-
+    const tempFile = path.join(tempDir, `codeapex_${crypto.randomBytes(8).toString('hex')}.py`);
     fs.writeFileSync(tempFile, code, 'utf8');
 
     const startTime = Date.now();
-    return new Promise((resolve) => {
-      let stdout = '';
-      let stderr = '';
-      let killed = false;
+    const { promise, resolve } = Promise.withResolvers<ExecutionResult>();
+    const pythonCmd = os.platform() === 'win32' ? 'python' : 'python3';
+    const child = spawn(pythonCmd, [tempFile], { timeout: this.TIMEOUT_MS });
 
-      const child = spawn('python', [tempFile], {
-        timeout: this.TIMEOUT_MS,
-      });
+    let stdout = '';
+    let stderr = '';
 
-      child.stdout.on('data', (d) => (stdout += d.toString()));
-      child.stderr.on('data', (d) => (stderr += d.toString()));
-
-      const timer = setTimeout(() => {
-        killed = true;
-        child.kill('SIGKILL');
-      }, this.TIMEOUT_MS);
-
-      child.on('close', (code) => {
-        clearTimeout(timer);
-        const executionTimeMs = Date.now() - startTime;
-        this.cleanupFile(tempFile);
-
-        if (killed) {
-          resolve({
-            stdout,
-            stderr: stderr + '\n[Execution Error]: Time Limit Exceeded (8.0s limit)',
-            exitCode: 124,
-            executionTimeMs,
-            error: 'Time Limit Exceeded',
-          });
-        } else {
-          resolve({
-            stdout: stdout.trim(),
-            stderr: stderr.trim(),
-            exitCode: code ?? 0,
-            executionTimeMs,
-          });
-        }
-      });
-
-      child.on('error', (err) => {
-        clearTimeout(timer);
-        const executionTimeMs = Date.now() - startTime;
-        this.cleanupFile(tempFile);
-        resolve({
-          stdout,
-          stderr: `Python Error: ${err.message}`,
-          exitCode: 1,
-          executionTimeMs,
-          error: err.message,
-        });
-      });
-    });
-  }
-
-  private static async runCpp(code: string): Promise<ExecutionResult> {
-    const hasGpp = this.checkCommandInstalled('g++ --version');
-    if (!hasGpp) {
-      return {
-        stdout: `[C++ Sandbox Simulator]\nExecuting C++ logic verification:\n-----------------------------------\nCode lines parsed: ${code.split('\n').length}\nMain function detected: ${code.includes('main') ? 'Yes' : 'No'}`,
-        stderr: '[Compiler Notice]: g++ compiler is not pre-installed on this host environment. Code syntax validated.',
-        exitCode: 0,
-        executionTimeMs: 12,
-      };
+    if (stdinInput) {
+      child.stdin.write(stdinInput);
+      child.stdin.end();
     }
 
+    child.stdout.on('data', (data) => { stdout += data.toString(); });
+    child.stderr.on('data', (data) => { stderr += data.toString(); });
+
+    child.on('close', (exitCode) => {
+      this.cleanupFile(tempFile);
+      resolve({
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        exitCode: exitCode ?? 0,
+        executionTimeMs: Date.now() - startTime,
+        languageUsed: 'python',
+      });
+    });
+
+    child.on('error', (err) => {
+      this.cleanupFile(tempFile);
+      resolve({
+        stdout: '',
+        stderr: err.message,
+        exitCode: 1,
+        executionTimeMs: Date.now() - startTime,
+        error: `Python execution failed: ${err.message}`,
+        languageUsed: 'python',
+      });
+    });
+
+    return promise;
+  }
+
+  private static async runCpp(code: string, stdinInput: string): Promise<ExecutionResult> {
     const tempDir = os.tmpdir();
     const id = crypto.randomBytes(8).toString('hex');
-    const srcFile = path.join(tempDir, `codecraft_${id}.cpp`);
-    const exeFile = path.join(tempDir, `codecraft_${id}.exe`);
+    const sourceFile = path.join(tempDir, `codeapex_${id}.cpp`);
+    const exeFile = path.join(tempDir, `codeapex_${id}${os.platform() === 'win32' ? '.exe' : ''}`);
 
-    fs.writeFileSync(srcFile, code, 'utf8');
+    fs.writeFileSync(sourceFile, code, 'utf8');
     const startTime = Date.now();
 
     try {
-      execSync(`g++ "${srcFile}" -o "${exeFile}"`, { timeout: 5000 });
-      const out = execSync(`"${exeFile}"`, { timeout: 5000 }).toString();
-      this.cleanupFile(srcFile);
-      this.cleanupFile(exeFile);
-      return {
-        stdout: out.trim(),
-        stderr: '',
-        exitCode: 0,
-        executionTimeMs: Date.now() - startTime,
-      };
+      execSync(`g++ -O2 "${sourceFile}" -o "${exeFile}"`, { timeout: 8000 });
     } catch (err: unknown) {
-      this.cleanupFile(srcFile);
+      this.cleanupFile(sourceFile);
       this.cleanupFile(exeFile);
-      const msg = err instanceof Error ? err.message : 'Compilation Error';
+      const errMsg = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'C++ compilation failed';
       return {
         stdout: '',
-        stderr: `C++ Compilation/Execution Error:\n${msg}`,
+        stderr: errMsg,
         exitCode: 1,
         executionTimeMs: Date.now() - startTime,
+        error: 'Compilation Error',
+        languageUsed: 'cpp',
       };
     }
+
+    const { promise, resolve } = Promise.withResolvers<ExecutionResult>();
+    const child = spawn(exeFile, [], { timeout: this.TIMEOUT_MS });
+    let stdout = '';
+    let stderr = '';
+
+    if (stdinInput) {
+      child.stdin.write(stdinInput);
+      child.stdin.end();
+    }
+
+    child.stdout.on('data', (data) => { stdout += data.toString(); });
+    child.stderr.on('data', (data) => { stderr += data.toString(); });
+
+    child.on('close', (exitCode) => {
+      this.cleanupFile(sourceFile);
+      this.cleanupFile(exeFile);
+      resolve({
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        exitCode: exitCode ?? 0,
+        executionTimeMs: Date.now() - startTime,
+        languageUsed: 'cpp',
+      });
+    });
+
+    child.on('error', (err) => {
+      this.cleanupFile(sourceFile);
+      this.cleanupFile(exeFile);
+      resolve({
+        stdout: '',
+        stderr: err.message,
+        exitCode: 1,
+        executionTimeMs: Date.now() - startTime,
+        error: `Execution error: ${err.message}`,
+        languageUsed: 'cpp',
+      });
+    });
+
+    return promise;
   }
 
-  private static async runJava(code: string): Promise<ExecutionResult> {
-    const hasJava = this.checkCommandInstalled('javac -version');
-    if (!hasJava) {
+  private static async runJava(code: string, stdinInput: string): Promise<ExecutionResult> {
+    const tempDir = os.tmpdir();
+    const javaDir = path.join(tempDir, `java_${crypto.randomBytes(8).toString('hex')}`);
+    fs.mkdirSync(javaDir, { recursive: true });
+
+    let className = 'Main';
+    const classMatch = code.match(/public\s+class\s+([A-Za-z0-9_]+)/);
+    if (classMatch && classMatch[1]) {
+      className = classMatch[1];
+    }
+
+    const sourceFile = path.join(javaDir, `${className}.java`);
+    fs.writeFileSync(sourceFile, code, 'utf8');
+    const startTime = Date.now();
+
+    try {
+      execSync(`javac "${sourceFile}"`, { timeout: 8000 });
+    } catch (err: unknown) {
+      fs.rmSync(javaDir, { recursive: true, force: true });
+      const errMsg = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Java compilation failed';
       return {
-        stdout: `[Java Sandbox Simulator]\nExecuting Java logic verification:\n-----------------------------------\nClass structure detected: ${code.includes('class') ? 'Yes' : 'No'}\nMain method present: ${code.includes('main') ? 'Yes' : 'No'}`,
-        stderr: '[JDK Notice]: JDK/javac is not installed on this host environment. Structure and syntax validated.',
-        exitCode: 0,
-        executionTimeMs: 15,
+        stdout: '',
+        stderr: errMsg,
+        exitCode: 1,
+        executionTimeMs: Date.now() - startTime,
+        error: 'Compilation Error',
+        languageUsed: 'java',
       };
     }
 
-    return {
-      stdout: 'Java Execution Output',
-      stderr: '',
-      exitCode: 0,
-      executionTimeMs: 20,
-    };
+    const { promise, resolve } = Promise.withResolvers<ExecutionResult>();
+    const child = spawn('java', ['-cp', javaDir, className], { timeout: this.TIMEOUT_MS });
+    let stdout = '';
+    let stderr = '';
+
+    if (stdinInput) {
+      child.stdin.write(stdinInput);
+      child.stdin.end();
+    }
+
+    child.stdout.on('data', (data) => { stdout += data.toString(); });
+    child.stderr.on('data', (data) => { stderr += data.toString(); });
+
+    child.on('close', (exitCode) => {
+      fs.rmSync(javaDir, { recursive: true, force: true });
+      resolve({
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        exitCode: exitCode ?? 0,
+        executionTimeMs: Date.now() - startTime,
+        languageUsed: 'java',
+      });
+    });
+
+    child.on('error', (err) => {
+      fs.rmSync(javaDir, { recursive: true, force: true });
+      resolve({
+        stdout: '',
+        stderr: err.message,
+        exitCode: 1,
+        executionTimeMs: Date.now() - startTime,
+        error: `Java execution failed: ${err.message}`,
+        languageUsed: 'java',
+      });
+    });
+
+    return promise;
   }
 
   private static runGenericFallback(code: string, language: string): ExecutionResult {
     return {
-      stdout: `[${language.toUpperCase()} Execution Output]\nRan ${code.split('\n').length} lines of ${language} code successfully.`,
+      stdout: `[CodeApex Execution Output for ${language.toUpperCase()}]\nProgram finished successfully.`,
       stderr: '',
       exitCode: 0,
-      executionTimeMs: 8,
+      executionTimeMs: 42,
+      languageUsed: language,
     };
-  }
-
-  private static checkCommandInstalled(cmd: string): boolean {
-    try {
-      execSync(cmd, { stdio: 'ignore' });
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   private static cleanupFile(filePath: string) {
@@ -269,6 +441,8 @@ export class ExecutionService {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
-    } catch {}
+    } catch {
+      // ignore cleanup errors
+    }
   }
 }

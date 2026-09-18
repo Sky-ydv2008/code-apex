@@ -8,6 +8,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { RoomWorkspacePage } from './pages/RoomWorkspacePage';
 import { ChallengesPage } from './pages/ChallengesPage';
 import { ChallengeWorkspacePage } from './pages/ChallengeWorkspacePage';
+import { ContestsPage } from './pages/ContestsPage';
+import { ContestArenaPage } from './pages/ContestArenaPage';
 
 export const App: React.FC = () => {
   return (
@@ -23,6 +25,8 @@ export const App: React.FC = () => {
               <Route path="/room/:idOrCode" element={<RoomWorkspacePage />} />
               <Route path="/challenges" element={<ChallengesPage />} />
               <Route path="/challenges/:slug" element={<ChallengeWorkspacePage />} />
+              <Route path="/contests" element={<ContestsPage />} />
+              <Route path="/contests/:idOrSlug" element={<ContestArenaPage />} />
             </Routes>
           </div>
         </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Challenge, LeaderboardUser } from '../types';
-import { Trophy, Award, Flame, Code, Sparkles, CheckCircle2, Search } from 'lucide-react';
+import { Trophy, Award, Flame, Code } from 'lucide-react';
 
 export const ChallengesPage: React.FC = () => {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -36,7 +36,7 @@ export const ChallengesPage: React.FC = () => {
       <div className="p-8 rounded-3xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/40 border border-amber-500/20 shadow-xl space-y-3">
         <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold">
           <Trophy className="w-3.5 h-3.5" />
-          <span>CodeCraft AI Learning & Rank Hub</span>
+          <span>CodeApex Learning & Rank Hub</span>
         </div>
         <h1 className="text-3xl md:text-4xl font-extrabold text-white">Coding Challenges & Leaderboard</h1>
         <p className="text-sm text-slate-400 max-w-2xl">
@@ -174,7 +174,7 @@ export const ChallengesPage: React.FC = () => {
 
                   <div>
                     <span className="font-bold text-slate-200 block">{user.name}</span>
-                    <span className="text-[11px] text-slate-500">{user._count.submissions} solved</span>
+                    <span className="text-[11px] text-slate-500">{user._count?.submissions || 0} solved</span>
                   </div>
                 </div>
 
