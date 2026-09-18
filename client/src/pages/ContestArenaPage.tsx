@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import {
@@ -10,12 +10,7 @@ import {
   Terminal,
   CheckCircle2,
   XCircle,
-  Award,
-  ChevronRight,
-  Maximize2,
-  HelpCircle,
   ListOrdered,
-  FileCode,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Contest, ContestProblem, ContestParticipant } from '../types';
@@ -40,12 +35,9 @@ const SUPPORTED_LANGUAGES = [
 
 export const ContestArenaPage: React.FC = () => {
   const { idOrSlug } = useParams<{ idOrSlug: string }>();
-  const navigate = useNavigate();
 
   const [contest, setContest] = useState<Contest | null>(null);
   const [selectedProblem, setSelectedProblem] = useState<ContestProblem | null>(null);
-  const [participant, setParticipant] = useState<ContestParticipant | null>(null);
-  const [leaderboard, setLeaderboard] = useState<Array<unknown>>([]);
 
   const [selectedLang, setSelectedLang] = useState('javascript');
   const [code, setCode] = useState('');
@@ -64,7 +56,6 @@ export const ContestArenaPage: React.FC = () => {
   } | null>(null);
 
   const [activeBottomTab, setActiveBottomTab] = useState<'console' | 'testcases' | 'leaderboard'>('console');
-  const [showLeaderboardDrawer, setShowLeaderboardDrawer] = useState(false);
 
   // Proctor Anti-cheat hook
   const {
@@ -78,7 +69,7 @@ export const ContestArenaPage: React.FC = () => {
   } = useProctor({
     enabled: contest?.antiCheatEnabled ?? true,
     maxStrikes: contest?.maxStrikes ?? 3,
-    onViolation: (eventType, currentStrikes) => {
+    onViolation: (eventType) => {
       if (contest?.id) {
         api.logContestAntiCheat(contest.id, eventType, `Proctor violation: ${eventType}`).catch(() => {});
       }
@@ -100,7 +91,6 @@ export const ContestArenaPage: React.FC = () => {
     try {
       const data = await api.getContest(idOrSlug!);
       setContest(data.contest);
-      setParticipant(data.participant);
 
       if (data.contest.problems && data.contest.problems.length > 0) {
         const prob = data.contest.problems[0];
@@ -110,14 +100,7 @@ export const ContestArenaPage: React.FC = () => {
 
       // Join contest automatically if not registered
       if (!data.participant && data.contest.id) {
-        const joined = await api.joinContest(data.contest.id);
-        setParticipant(joined.participant);
-      }
-
-      // Load Leaderboard
-      if (data.contest.id) {
-        const lbData = await api.getContestLeaderboard(data.contest.id);
-        setLeaderboard(lbData.leaderboard);
+        await api.joinContest(data.contest.id);
       }
     } catch (err) {
       console.error('Failed to load contest:', err);
@@ -167,10 +150,6 @@ export const ContestArenaPage: React.FC = () => {
         score: res.score,
         error: res.isPassed ? undefined : `Status: ${res.status} (${res.passCount}/${res.totalCount} Passed)`,
       });
-
-      // Refresh Leaderboard
-      const lbData = await api.getContestLeaderboard(contest.id);
-      setLeaderboard(lbData.leaderboard);
       setActiveBottomTab('console');
     } catch (err: unknown) {
       setExecutionOutput({
@@ -183,14 +162,14 @@ export const ContestArenaPage: React.FC = () => {
 
   if (!contest) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
-        <div className="animate-pulse text-cyan-400 font-mono text-sm">Loading Contest Arena...</div>
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center">
+        <div className="animate-pulse text-indigo-600 font-mono text-sm">Loading Contest Arena...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-none">
       {/* Proctor Anti-Cheat Banner */}
       <ProctorBanner
         enabled={contest.antiCheatEnabled}
@@ -213,10 +192,10 @@ export const ContestArenaPage: React.FC = () => {
       />
 
       {/* Header Bar */}
-      <div className="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between">
+      <div className="bg-white border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2 text-cyan-400 font-black tracking-tight text-lg">
-            <Trophy className="w-5 h-5 text-amber-400" />
+          <div className="flex items-center space-x-2 text-indigo-700 font-extrabold tracking-tight text-lg">
+            <Trophy className="w-5 h-5 text-amber-500" />
             <span className="hidden sm:inline">{contest.title}</span>
           </div>
 
@@ -227,27 +206,19 @@ export const ContestArenaPage: React.FC = () => {
                 onClick={() => handleSelectProblem(prob)}
                 className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${
                   selectedProblem?.id === prob.id
-                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
                 <span>P{idx + 1}</span>
-                <span className="hidden md:inline font-normal">({prob.points}pts)</span>
+                <span className="hidden md:inline font-semibold text-slate-500">({prob.points}pts)</span>
               </button>
             ))}
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowLeaderboardDrawer(!showLeaderboardDrawer)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-amber-300 border border-slate-700 transition"
-          >
-            <ListOrdered className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">Leaderboard</span>
-          </button>
-
-          <div className="flex items-center space-x-1.5 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800 text-xs font-mono text-cyan-400">
+          <div className="flex items-center space-x-1.5 bg-slate-100 px-3 py-1 rounded-xl border border-slate-200 text-xs font-mono text-indigo-700 font-bold">
             <Clock className="w-3.5 h-3.5" />
             <span>{contest.durationMinutes}m Left</span>
           </div>
@@ -257,25 +228,25 @@ export const ContestArenaPage: React.FC = () => {
       {/* Workspace Body */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Left Panel: Problem Statement */}
-        <div className="w-full md:w-1/2 border-r border-slate-800 flex flex-col overflow-y-auto p-6 bg-slate-900/60">
+        <div className="w-full md:w-1/2 border-r border-slate-200 flex flex-col overflow-y-auto p-6 bg-white">
           {selectedProblem ? (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-100">{selectedProblem.title}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">{selectedProblem.title}</h2>
                   <div className="flex items-center space-x-3 mt-2">
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-xs font-bold font-mono ${
                         selectedProblem.difficulty === 'EASY'
-                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : selectedProblem.difficulty === 'MEDIUM'
-                          ? 'bg-amber-950 text-amber-400 border border-amber-800'
-                          : 'bg-rose-950 text-rose-400 border border-rose-800'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200'
                       }`}
                     >
                       {selectedProblem.difficulty}
                     </span>
-                    <span className="text-xs font-mono text-cyan-400 font-semibold">
+                    <span className="text-xs font-mono text-indigo-600 font-bold">
                       +{selectedProblem.points} Points
                     </span>
                   </div>
@@ -283,46 +254,46 @@ export const ContestArenaPage: React.FC = () => {
               </div>
 
               {/* Description */}
-              <div className="prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+              <div className="prose prose-slate max-w-none text-slate-700 text-sm leading-relaxed whitespace-pre-line">
                 {selectedProblem.description}
               </div>
 
               {/* Sample Test Cases */}
-              <div className="space-y-3 pt-4 border-t border-slate-800">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
-                  <Terminal className="w-4 h-4 text-cyan-400" />
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center space-x-2">
+                  <Terminal className="w-4 h-4 text-indigo-600" />
                   <span>Sample Test Cases</span>
                 </h4>
                 {(() => {
                   try {
                     const cases = JSON.parse(selectedProblem.testCases || '[]');
                     return cases.map((tc: { input: string; expected: string }, idx: number) => (
-                      <div key={idx} className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs space-y-2 font-mono">
+                      <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-2 font-mono">
                         <div>
-                          <span className="text-slate-500">Input:</span>
-                          <pre className="text-slate-200 mt-1 bg-slate-900 p-2 rounded">{tc.input}</pre>
+                          <span className="text-slate-500 font-semibold">Input:</span>
+                          <pre className="text-slate-900 mt-1 bg-white p-2 rounded border border-slate-200">{tc.input}</pre>
                         </div>
                         <div>
-                          <span className="text-slate-500">Expected Output:</span>
-                          <pre className="text-emerald-400 mt-1 bg-slate-900 p-2 rounded">{tc.expected}</pre>
+                          <span className="text-slate-500 font-semibold">Expected Output:</span>
+                          <pre className="text-emerald-700 mt-1 bg-white p-2 rounded border border-slate-200 font-bold">{tc.expected}</pre>
                         </div>
                       </div>
                     ));
                   } catch {
-                    return <p className="text-xs text-slate-500">No test cases displayable</p>;
+                    return <p className="text-xs text-slate-400">No test cases displayable</p>;
                   }
                 })()}
               </div>
             </div>
           ) : (
-            <div className="text-center py-20 text-slate-500">Select a problem above to begin</div>
+            <div className="text-center py-20 text-slate-400">Select a problem above to begin</div>
           )}
         </div>
 
         {/* Right Panel: Editor & Code Execution */}
-        <div className="w-full md:w-1/2 flex flex-col bg-slate-950">
+        <div className="w-full md:w-1/2 flex flex-col bg-white">
           {/* Controls Bar */}
-          <div className="bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between">
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center justify-between">
             {/* Language Dropdown */}
             <select
               value={selectedLang}
@@ -334,7 +305,7 @@ export const ContestArenaPage: React.FC = () => {
                   setCode(defaultC);
                 }
               }}
-              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs font-mono font-semibold focus:outline-none focus:border-cyan-500"
+              className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs font-mono font-semibold focus:outline-none focus:border-indigo-600"
             >
               {SUPPORTED_LANGUAGES.map((l) => (
                 <option key={l.id} value={l.id}>
@@ -347,16 +318,16 @@ export const ContestArenaPage: React.FC = () => {
               <button
                 onClick={handleRunCode}
                 disabled={isRunning || isSubmitting || isDisqualified}
-                className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center space-x-1.5"
+                className="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition flex items-center space-x-1.5"
               >
-                <Play className="w-3.5 h-3.5 text-emerald-400" />
+                <Play className="w-3.5 h-3.5 text-emerald-600" />
                 <span>{isRunning ? 'Running...' : 'Run Tests'}</span>
               </button>
 
               <button
                 onClick={handleSubmitCode}
                 disabled={isRunning || isSubmitting || isDisqualified}
-                className="px-5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/30 transition flex items-center space-x-1.5"
+                className="px-5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition flex items-center space-x-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>{isSubmitting ? 'Submitting...' : 'Submit'}</span>
@@ -364,12 +335,12 @@ export const ContestArenaPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Monaco Editor */}
+          {/* Monaco Editor (Standard Light Theme "vs") */}
           <div className="flex-1 min-h-[300px]">
             <Editor
               height="100%"
               language={selectedLang}
-              theme="vs-dark"
+              theme="vs"
               value={code}
               onChange={(value) => setCode(value || '')}
               options={{
@@ -383,13 +354,13 @@ export const ContestArenaPage: React.FC = () => {
           </div>
 
           {/* Bottom Terminal / Output Panel */}
-          <div className="h-48 border-t border-slate-800 bg-slate-900/90 flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-1.5 text-xs">
+          <div className="h-48 border-t border-slate-200 bg-slate-50 flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-1.5 text-xs bg-white">
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setActiveBottomTab('console')}
                   className={`px-3 py-1 rounded-lg font-bold transition ${
-                    activeBottomTab === 'console' ? 'bg-cyan-950 text-cyan-400 border border-cyan-800' : 'text-slate-400'
+                    activeBottomTab === 'console' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600'
                   }`}
                 >
                   Console Output
@@ -397,7 +368,7 @@ export const ContestArenaPage: React.FC = () => {
                 <button
                   onClick={() => setActiveBottomTab('testcases')}
                   className={`px-3 py-1 rounded-lg font-bold transition ${
-                    activeBottomTab === 'testcases' ? 'bg-cyan-950 text-cyan-400 border border-cyan-800' : 'text-slate-400'
+                    activeBottomTab === 'testcases' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600'
                   }`}
                 >
                   Custom STDIN
@@ -411,7 +382,7 @@ export const ContestArenaPage: React.FC = () => {
               )}
             </div>
 
-            <div className="flex-1 p-4 font-mono text-xs overflow-y-auto bg-slate-950">
+            <div className="flex-1 p-4 font-mono text-xs overflow-y-auto bg-slate-50">
               {activeBottomTab === 'console' && (
                 <div>
                   {executionOutput ? (
@@ -420,11 +391,11 @@ export const ContestArenaPage: React.FC = () => {
                         <div
                           className={`p-2 rounded-lg font-bold flex items-center space-x-2 ${
                             executionOutput.isPassed
-                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                              : 'bg-rose-950 text-rose-300 border border-rose-800'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : 'bg-rose-50 text-rose-800 border border-rose-200'
                           }`}
                         >
-                          {executionOutput.isPassed ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                          {executionOutput.isPassed ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <XCircle className="w-4 h-4 text-rose-600" />}
                           <span>
                             {executionOutput.isPassed ? 'ACCEPTED! All Test Cases Passed.' : 'WRONG ANSWER / REJECTED'}
                           </span>
@@ -432,38 +403,38 @@ export const ContestArenaPage: React.FC = () => {
                       )}
 
                       {executionOutput.error && (
-                        <pre className="text-rose-400 whitespace-pre-wrap">{executionOutput.error}</pre>
+                        <pre className="text-rose-700 whitespace-pre-wrap font-semibold">{executionOutput.error}</pre>
                       )}
 
                       {executionOutput.stdout && (
                         <div>
-                          <span className="text-slate-500 text-[10px] uppercase">stdout:</span>
-                          <pre className="text-emerald-400 whitespace-pre-wrap mt-0.5">{executionOutput.stdout}</pre>
+                          <span className="text-slate-500 text-[10px] uppercase font-bold">stdout:</span>
+                          <pre className="text-slate-900 bg-white p-2 rounded border border-slate-200 whitespace-pre-wrap mt-0.5">{executionOutput.stdout}</pre>
                         </div>
                       )}
 
                       {executionOutput.stderr && (
                         <div>
-                          <span className="text-slate-500 text-[10px] uppercase">stderr:</span>
-                          <pre className="text-amber-400 whitespace-pre-wrap mt-0.5">{executionOutput.stderr}</pre>
+                          <span className="text-slate-500 text-[10px] uppercase font-bold">stderr:</span>
+                          <pre className="text-amber-800 bg-amber-50 p-2 rounded border border-amber-200 whitespace-pre-wrap mt-0.5">{executionOutput.stderr}</pre>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="text-slate-600 italic">Run or Submit code to see live test case results...</div>
+                    <div className="text-slate-400 italic">Run or Submit code to see live test case results...</div>
                   )}
                 </div>
               )}
 
               {activeBottomTab === 'testcases' && (
                 <div className="h-full flex flex-col">
-                  <label className="text-slate-400 text-[11px] mb-1">Standard Input (stdin):</label>
+                  <label className="text-slate-600 text-[11px] mb-1 font-semibold">Standard Input (stdin):</label>
                   <textarea
                     rows={4}
                     value={stdinInput}
                     onChange={(e) => setStdinInput(e.target.value)}
                     placeholder="Enter custom input values line by line..."
-                    className="flex-1 p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 font-mono focus:outline-none focus:border-cyan-500"
+                    className="flex-1 p-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono focus:outline-none focus:border-indigo-600"
                   />
                 </div>
               )}

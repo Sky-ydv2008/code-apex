@@ -12,7 +12,7 @@ import {
   CombinedProfileStats,
 } from '../types';
 
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
 const getHeaders = () => {
   const token = localStorage.getItem('codecraft_token');
@@ -23,7 +23,8 @@ const getHeaders = () => {
 };
 
 async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`, {
+  const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
+  const res = await fetch(fullUrl, {
     ...options,
     headers: {
       ...getHeaders(),

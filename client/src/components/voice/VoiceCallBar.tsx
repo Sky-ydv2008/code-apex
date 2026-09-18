@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Volume2, PhoneOff, Users, Radio } from 'lucide-react';
+import React, { useState } from 'react';
+import { Mic, MicOff, PhoneOff, Users, Radio } from 'lucide-react';
 import { Socket } from 'socket.io-client';
 
 interface VoiceCallBarProps {
@@ -43,17 +43,17 @@ export const VoiceCallBar: React.FC<VoiceCallBarProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between">
+    <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-2 text-cyan-400 font-semibold text-xs uppercase tracking-wider">
-          <Radio className={`w-4 h-4 ${inCall ? 'animate-pulse text-emerald-400' : 'text-slate-500'}`} />
+        <div className="flex items-center space-x-2 text-indigo-700 font-bold text-xs uppercase tracking-wider">
+          <Radio className={`w-4 h-4 ${inCall ? 'animate-pulse text-emerald-600' : 'text-slate-400'}`} />
           <span>Live Audio Room</span>
         </div>
 
-        <span className="text-slate-700">|</span>
+        <span className="text-slate-300">|</span>
 
-        <div className="flex items-center space-x-1.5 text-xs text-slate-400">
-          <Users className="w-3.5 h-3.5 text-slate-500" />
+        <div className="flex items-center space-x-1.5 text-xs text-slate-600">
+          <Users className="w-3.5 h-3.5 text-slate-400" />
           <span>{members.length} Connected</span>
         </div>
       </div>
@@ -65,26 +65,26 @@ export const VoiceCallBar: React.FC<VoiceCallBarProps> = ({
               onClick={toggleMute}
               className={`p-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition ${
                 isMuted
-                  ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                  : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
               }`}
             >
-              {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4 animate-bounce" />}
+              {isMuted ? <MicOff className="w-4 h-4 text-amber-600" /> : <Mic className="w-4 h-4 text-emerald-600 animate-bounce" />}
               <span>{isMuted ? 'Mic Off' : 'Speaking'}</span>
             </button>
 
             <button
               onClick={toggleCall}
-              className="p-2 rounded-xl bg-rose-950 text-rose-300 border border-rose-800 hover:bg-rose-900 text-xs font-semibold flex items-center space-x-1.5 transition"
+              className="p-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 text-xs font-bold flex items-center space-x-1.5 transition"
             >
-              <PhoneOff className="w-4 h-4" />
+              <PhoneOff className="w-4 h-4 text-rose-600" />
               <span>Leave Voice</span>
             </button>
           </>
         ) : (
           <button
             onClick={toggleCall}
-            className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-cyan-600/20"
+            className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
           >
             <Mic className="w-3.5 h-3.5" />
             <span>Join Audio Room</span>

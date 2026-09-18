@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, CheckCircle, Globe } from 'lucide-react';
+import { X, Save, Globe } from 'lucide-react';
 
 interface EditHandlesModalProps {
   isOpen: boolean;
@@ -58,30 +58,30 @@ export const EditHandlesModal: React.FC<EditHandlesModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
-      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+      <div className="max-w-md w-full bg-white border border-slate-200 rounded-2xl p-6 shadow-xl relative">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
           <div className="flex items-center space-x-2">
-            <Globe className="w-5 h-5 text-cyan-400" />
-            <h3 className="text-lg font-bold text-slate-100">Connect Coding Profiles</h3>
+            <Globe className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-lg font-bold text-slate-900">Connect Coding Profiles</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {error && (
-          <div className="p-3 mb-4 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-300 text-xs">
+          <div className="p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               LeetCode Handle
             </label>
             <input
@@ -89,12 +89,12 @@ export const EditHandlesModal: React.FC<EditHandlesModalProps> = ({
               placeholder="e.g. sky_ydv"
               value={leetcode}
               onChange={(e) => setLeetcode(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-amber-500 font-mono"
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-amber-500 focus:bg-white font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Codeforces Username
             </label>
             <input
@@ -102,12 +102,12 @@ export const EditHandlesModal: React.FC<EditHandlesModalProps> = ({
               placeholder="e.g. tourist"
               value={codeforces}
               onChange={(e) => setCodeforces(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-blue-500 font-mono"
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-blue-500 focus:bg-white font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               CodeChef Username
             </label>
             <input
@@ -115,12 +115,12 @@ export const EditHandlesModal: React.FC<EditHandlesModalProps> = ({
               placeholder="e.g. sky_code"
               value={codechef}
               onChange={(e) => setCodechef(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-orange-500 font-mono"
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-orange-500 focus:bg-white font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               GeeksforGeeks Handle
             </label>
             <input
@@ -128,12 +128,12 @@ export const EditHandlesModal: React.FC<EditHandlesModalProps> = ({
               placeholder="e.g. sky_apex"
               value={gfg}
               onChange={(e) => setGfg(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-emerald-500 font-mono"
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-emerald-500 focus:bg-white font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Developer Bio / Pitch
             </label>
             <textarea
@@ -141,7 +141,7 @@ export const EditHandlesModal: React.FC<EditHandlesModalProps> = ({
               placeholder="Tell others about your coding journey..."
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500"
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white"
             />
           </div>
 
@@ -149,14 +149,14 @@ export const EditHandlesModal: React.FC<EditHandlesModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold shadow-lg shadow-cyan-600/20 transition flex items-center space-x-2"
+              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-sm transition flex items-center space-x-2"
             >
               {loading ? (
                 <span>Syncing...</span>
