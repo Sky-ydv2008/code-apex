@@ -96,9 +96,9 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#FBF9F5] p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
       {/* Welcome Hero Banner */}
-      <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white rounded-3xl p-8 relative overflow-hidden shadow-md">
+      <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-indigo-950 text-white rounded-3xl p-8 relative overflow-hidden shadow-md">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2">
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-xs text-white text-xs font-mono font-medium border border-white/20">
@@ -116,7 +116,7 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-indigo-700 font-bold text-sm shadow-md transition flex items-center space-x-2"
+              className="px-5 py-3 rounded-2xl bg-white hover:bg-stone-100 text-indigo-800 font-bold text-sm shadow-md transition flex items-center space-x-2"
             >
               <Plus className="w-4 h-4 text-indigo-600" />
               <span>Create New Room</span>
@@ -124,7 +124,7 @@ export const DashboardPage: React.FC = () => {
 
             <Link
               to="/contests"
-              className="px-5 py-3 rounded-2xl bg-indigo-800/80 hover:bg-indigo-800 text-amber-300 font-bold text-sm transition flex items-center space-x-2 border border-indigo-500/40"
+              className="px-5 py-3 rounded-2xl bg-indigo-900/80 hover:bg-indigo-900 text-amber-300 font-bold text-sm transition flex items-center space-x-2 border border-indigo-500/40"
             >
               <Trophy className="w-4 h-4 text-amber-400" />
               <span>Contest Arena</span>
@@ -168,18 +168,18 @@ export const DashboardPage: React.FC = () => {
         {/* My Collaborative Rooms */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
+            <h3 className="text-lg font-bold text-stone-900 flex items-center space-x-2">
               <Code2 className="w-5 h-5 text-indigo-600" />
               <span>My Active Rooms</span>
             </h3>
-            <span className="text-xs font-mono text-slate-500 font-semibold">{myRooms.length} Active</span>
+            <span className="text-xs font-mono text-stone-500 font-semibold">{myRooms.length} Active</span>
           </div>
 
           {loading ? (
-            <div className="p-8 text-center text-slate-400 animate-pulse">Loading rooms...</div>
+            <div className="p-8 text-center text-stone-400 animate-pulse">Loading rooms...</div>
           ) : myRooms.length === 0 ? (
-            <div className="p-8 text-center bg-white border border-slate-200/80 rounded-2xl shadow-xs">
-              <p className="text-sm text-slate-500">You have no active rooms yet.</p>
+            <div className="p-8 text-center bg-white border border-stone-200/80 rounded-2xl shadow-xs">
+              <p className="text-sm text-stone-500">You have no active rooms yet.</p>
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="mt-3 text-xs font-bold text-indigo-600 hover:underline"
@@ -193,21 +193,21 @@ export const DashboardPage: React.FC = () => {
                 <div
                   key={room.id}
                   onClick={() => navigate(`/room/${room.id}`)}
-                  className="p-4 bg-white border border-slate-200/80 hover:border-indigo-300 rounded-2xl transition cursor-pointer flex items-center justify-between group shadow-xs hover:shadow-md"
+                  className="p-4 bg-white border border-stone-200/80 hover:border-indigo-300 rounded-2xl transition cursor-pointer flex items-center justify-between group shadow-xs hover:shadow-md"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
-                      <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                      <h4 className="font-bold text-stone-900 group-hover:text-indigo-600 transition">
                         {room.name}
                       </h4>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono font-semibold">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F2ECE1] text-stone-700 font-mono font-semibold">
                         {room.language}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 font-mono">Code: {room.roomCode}</p>
+                    <p className="text-xs text-stone-500 font-mono">Code: {room.roomCode}</p>
                   </div>
 
-                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition" />
+                  <ArrowRight className="w-4 h-4 text-stone-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition" />
                 </div>
               ))}
             </div>
@@ -217,36 +217,36 @@ export const DashboardPage: React.FC = () => {
         {/* Public Rooms */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
+            <h3 className="text-lg font-bold text-stone-900 flex items-center space-x-2">
               <Globe className="w-5 h-5 text-purple-600" />
               <span>Public Coding Hubs</span>
             </h3>
-            <span className="text-xs font-mono text-slate-500 font-semibold">{publicRooms.length} Hubs</span>
+            <span className="text-xs font-mono text-stone-500 font-semibold">{publicRooms.length} Hubs</span>
           </div>
 
           {loading ? (
-            <div className="p-8 text-center text-slate-400 animate-pulse">Loading hub rooms...</div>
+            <div className="p-8 text-center text-stone-400 animate-pulse">Loading hub rooms...</div>
           ) : (
             <div className="space-y-3">
               {publicRooms.slice(0, 5).map((room) => (
                 <div
                   key={room.id}
                   onClick={() => navigate(`/room/${room.id}`)}
-                  className="p-4 bg-white border border-slate-200/80 hover:border-purple-300 rounded-2xl transition cursor-pointer flex items-center justify-between group shadow-xs hover:shadow-md"
+                  className="p-4 bg-white border border-stone-200/80 hover:border-purple-300 rounded-2xl transition cursor-pointer flex items-center justify-between group shadow-xs hover:shadow-md"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
-                      <h4 className="font-bold text-slate-900 group-hover:text-purple-600 transition">
+                      <h4 className="font-bold text-stone-900 group-hover:text-purple-600 transition">
                         {room.name}
                       </h4>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono font-semibold">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F2ECE1] text-stone-700 font-mono font-semibold">
                         {room.language}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 line-clamp-1">{room.description || 'Public collaborative workspace'}</p>
+                    <p className="text-xs text-stone-500 line-clamp-1">{room.description || 'Public collaborative workspace'}</p>
                   </div>
 
-                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition" />
+                  <ArrowRight className="w-4 h-4 text-stone-400 group-hover:text-purple-600 group-hover:translate-x-1 transition" />
                 </div>
               ))}
             </div>
@@ -256,39 +256,39 @@ export const DashboardPage: React.FC = () => {
 
       {/* Create Room Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-6 shadow-xl relative">
-            <h3 className="text-xl font-bold text-slate-900 mb-4">Create Collaborative Room</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/30 backdrop-blur-xs p-4">
+          <div className="max-w-md w-full bg-[#FBF9F5] border border-stone-300 rounded-3xl p-6 shadow-xl relative">
+            <h3 className="text-xl font-bold text-stone-900 mb-4">Create Collaborative Room</h3>
             <form onSubmit={handleCreateRoom} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Room Name</label>
+                <label className="block text-xs font-semibold text-stone-700 mb-1">Room Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Apex Algo Studio"
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-stone-300 text-stone-900 text-sm focus:outline-none focus:border-indigo-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
+                <label className="block text-xs font-semibold text-stone-700 mb-1">Description</label>
                 <textarea
                   rows={2}
                   placeholder="Describe your session project..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-stone-300 text-stone-900 text-sm focus:outline-none focus:border-indigo-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Language</label>
+                <label className="block text-xs font-semibold text-stone-700 mb-1">Primary Language</label>
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white font-mono"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-stone-300 text-stone-900 text-sm focus:outline-none focus:border-indigo-600 font-mono"
                 >
                   <option value="javascript">JavaScript (Node.js)</option>
                   <option value="typescript">TypeScript</option>
@@ -304,7 +304,7 @@ export const DashboardPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold"
+                  className="px-4 py-2 rounded-xl bg-[#F2ECE1] hover:bg-[#EAE2D3] text-stone-800 text-sm font-semibold"
                 >
                   Cancel
                 </button>

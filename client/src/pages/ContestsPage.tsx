@@ -86,9 +86,9 @@ export const ContestsPage: React.FC = () => {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 bg-slate-50 min-h-[calc(100vh-4rem)]">
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 bg-[#FBF9F5] min-h-[calc(100vh-4rem)]">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white rounded-3xl p-8 relative overflow-hidden shadow-md">
+      <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-indigo-950 text-white rounded-3xl p-8 relative overflow-hidden shadow-md">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-3">
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-xs border border-white/20 text-white text-xs font-mono font-semibold">
@@ -105,7 +105,7 @@ export const ContestsPage: React.FC = () => {
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 rounded-2xl bg-white hover:bg-slate-100 text-indigo-700 font-bold text-sm shadow-md transition flex items-center space-x-2 shrink-0"
+            className="px-6 py-3 rounded-2xl bg-white hover:bg-stone-100 text-indigo-800 font-bold text-sm shadow-md transition flex items-center space-x-2 shrink-0"
           >
             <Plus className="w-5 h-5 text-indigo-600" />
             <span>Host Contest</span>
@@ -115,7 +115,7 @@ export const ContestsPage: React.FC = () => {
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center space-x-2 bg-white border border-slate-200/80 p-1.5 rounded-2xl w-full md:w-auto shadow-xs">
+        <div className="flex items-center space-x-2 bg-white border border-stone-200/80 p-1.5 rounded-2xl w-full md:w-auto shadow-xs">
           {(['ALL', 'LIVE', 'UPCOMING', 'PAST'] as const).map((tab) => (
             <button
               key={tab}
@@ -123,7 +123,7 @@ export const ContestsPage: React.FC = () => {
               className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
                 filter === tab
                   ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  : 'text-stone-700 hover:text-stone-950 hover:bg-[#F2ECE1]'
               }`}
             >
               {tab === 'LIVE' && <span className="inline-block w-2 h-2 rounded-full bg-rose-500 animate-ping mr-1.5" />}
@@ -133,25 +133,25 @@ export const ContestsPage: React.FC = () => {
         </div>
 
         <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+          <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
           <input
             type="text"
             placeholder="Search contests..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-2xl bg-white border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-indigo-600 shadow-xs"
+            className="w-full pl-10 pr-4 py-2 rounded-2xl bg-white border border-stone-300 text-stone-900 text-sm focus:outline-none focus:border-indigo-600 shadow-xs"
           />
         </div>
       </div>
 
       {/* Contest Cards Grid */}
       {loading ? (
-        <div className="text-center py-16 text-slate-400 animate-pulse">Loading Contests...</div>
+        <div className="text-center py-16 text-stone-400 animate-pulse">Loading Contests...</div>
       ) : filteredContests.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-slate-200 rounded-3xl shadow-xs">
-          <Trophy className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-800">No Contests Found</h3>
-          <p className="text-xs text-slate-500 mt-1">Host your own contest or try clearing filters.</p>
+        <div className="text-center py-16 bg-white border border-stone-200 rounded-3xl shadow-xs">
+          <Trophy className="w-12 h-12 text-stone-400 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-stone-900">No Contests Found</h3>
+          <p className="text-xs text-stone-500 mt-1">Host your own contest or try clearing filters.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -160,7 +160,7 @@ export const ContestsPage: React.FC = () => {
             return (
               <div
                 key={contest.id}
-                className="bg-white border border-slate-200/80 hover:border-indigo-300 rounded-3xl p-6 transition flex flex-col justify-between group shadow-xs hover:shadow-md relative overflow-hidden"
+                className="bg-white border border-stone-200/80 hover:border-indigo-300 rounded-3xl p-6 transition flex flex-col justify-between group shadow-xs hover:shadow-md relative overflow-hidden"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -170,7 +170,7 @@ export const ContestsPage: React.FC = () => {
                           ? 'bg-rose-50 text-rose-700 border border-rose-200 animate-pulse'
                           : status === 'UPCOMING'
                           ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                          : 'bg-slate-100 text-slate-600'
+                          : 'bg-stone-100 text-stone-600'
                       }`}
                     >
                       {status === 'LIVE' ? '🔴 LIVE NOW' : status}
@@ -184,29 +184,29 @@ export const ContestsPage: React.FC = () => {
                     )}
                   </div>
 
-                  <h3 className="text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition mb-2">
+                  <h3 className="text-xl font-bold text-stone-900 group-hover:text-indigo-600 transition mb-2">
                     {contest.title}
                   </h3>
-                  <p className="text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">
+                  <p className="text-xs text-stone-500 line-clamp-2 mb-4 leading-relaxed">
                     {contest.description}
                   </p>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 font-mono">
+                <div className="space-y-4 pt-4 border-t border-stone-100">
+                  <div className="grid grid-cols-2 gap-2 text-xs text-stone-500 font-mono">
                     <div className="flex items-center space-x-1.5">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <Clock className="w-3.5 h-3.5 text-stone-400" />
                       <span>{contest.durationMinutes} mins</span>
                     </div>
                     <div className="flex items-center space-x-1.5 justify-end">
-                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <Users className="w-3.5 h-3.5 text-stone-400" />
                       <span>{contest._count?.participants || 0} Registered</span>
                     </div>
                   </div>
 
                   <button
                     onClick={() => navigate(`/contests/${contest.slug}`)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-indigo-600 text-slate-800 hover:text-white text-xs font-bold transition flex items-center justify-center space-x-2"
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#F2ECE1] hover:bg-indigo-600 text-stone-800 hover:text-white text-xs font-bold transition flex items-center justify-center space-x-2"
                   >
                     <span>Enter Contest Arena</span>
                     <ArrowRight className="w-4 h-4" />
@@ -220,65 +220,65 @@ export const ContestsPage: React.FC = () => {
 
       {/* Host Contest Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="max-w-lg w-full bg-white border border-slate-200 rounded-3xl p-6 shadow-xl relative">
-            <h3 className="text-xl font-bold text-slate-900 mb-4">Create New Coding Contest</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/30 backdrop-blur-xs p-4">
+          <div className="max-w-lg w-full bg-[#FBF9F5] border border-stone-300 rounded-3xl p-6 shadow-xl relative">
+            <h3 className="text-xl font-bold text-stone-900 mb-4">Create New Coding Contest</h3>
             <form onSubmit={handleCreateContest} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Contest Title</label>
+                <label className="block text-xs font-semibold text-stone-700 mb-1">Contest Title</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Apex Speedrun Championship"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-stone-300 text-stone-900 text-sm focus:outline-none focus:border-indigo-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
+                <label className="block text-xs font-semibold text-stone-700 mb-1">Description</label>
                 <textarea
                   rows={2}
                   required
                   placeholder="Describe the contest goals and problem categories..."
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-stone-300 text-stone-900 text-sm focus:outline-none focus:border-indigo-600"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Duration (Mins)</label>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">Duration (Mins)</label>
                   <input
                     type="number"
                     value={newDuration}
                     onChange={(e) => setNewDuration(Number(e.target.value))}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white font-mono"
+                    className="w-full px-3.5 py-2 rounded-xl bg-white border border-stone-300 text-stone-900 text-sm focus:outline-none focus:border-indigo-600 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Max Strikes</label>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">Max Strikes</label>
                   <input
                     type="number"
                     value={maxStrikes}
                     onChange={(e) => setMaxStrikes(Number(e.target.value))}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white font-mono"
+                    className="w-full px-3.5 py-2 rounded-xl bg-white border border-stone-300 text-stone-900 text-sm focus:outline-none focus:border-indigo-600 font-mono"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="flex items-center space-x-3 p-3 rounded-xl bg-white border border-stone-300">
                 <input
                   type="checkbox"
                   id="antiCheatToggle"
                   checked={antiCheat}
                   onChange={(e) => setAntiCheat(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-indigo-600 bg-white border-stone-300 rounded focus:ring-indigo-500"
                 />
-                <label htmlFor="antiCheatToggle" className="text-xs text-slate-700 font-medium">
+                <label htmlFor="antiCheatToggle" className="text-xs text-stone-700 font-medium">
                   Enable Proctor Anti-Cheat (Strict Tab Switching Enforcement)
                 </label>
               </div>
@@ -287,7 +287,7 @@ export const ContestsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold"
+                  className="px-4 py-2 rounded-xl bg-[#F2ECE1] hover:bg-[#EAE2D3] text-stone-800 text-sm font-semibold"
                 >
                   Cancel
                 </button>
